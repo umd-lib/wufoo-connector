@@ -15,6 +15,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.jdom2.Document;
 import org.jdom2.Element;
@@ -49,10 +50,30 @@ public class EntryController extends HttpServlet {
       throws ServletException, IOException {
     /* ServletContext used for setting attributes for debugging */
     ServletContext sc = getServletContext();
+    String handshake = (String) sc.getAttribute("handshakeKey");
     /*
      * Extracts form hash from path to identify form and entry id for
      * identifying entries
      */
+    if (StringUtils.isEmpty(handshake)) {
+      log.warn("No handshake key is set in webdefault.xml. "
+          + "Without authentication, your service may be vulnerable "
+          + "to spam and other attacks.");
+    } else {
+      String requestKey = request.getParameter("HandshakeKey");
+      if (StringUtils.isEmpty(requestKey)) {
+        String error = "Handshake key is missing from request. Make sure "
+            + "Wufoo form notifications are properly configured";
+        response.sendError(HttpServletResponse.SC_BAD_REQUEST, error);
+        return;
+      } else if (!StringUtils.equals(handshake, requestKey)) {
+        String error = "Invalid handshake key. Make sure the correct "
+            + "handshake key is configured for your form notification";
+        response.sendError(HttpServletResponse.SC_FORBIDDEN, error);
+        return;
+      }
+    }
+
     String path = request.getPathTranslated();
     String hash = request.getPathInfo().replace("/", "");
     String entryId = request.getParameter("EntryId");
