@@ -49,12 +49,14 @@ public class EntryController extends HttpServlet {
   protected void doPost(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
     /* ServletContext used for setting attributes for debugging */
-    ServletContext sc = getServletContext();
-    String handshake = (String) sc.getAttribute("handshakeKey");
+    ServletContext context = getServletContext();
+
     /*
-     * Extracts form hash from path to identify form and entry id for
-     * identifying entries
+     * Checks that the handshake key included in the request is valid, assuming
+     * a handshake key was specified in the configuration. If not yet
+     * configured, user is warned of security risk
      */
+    String handshake = context.getInitParameter("handshakeKey");
     if (StringUtils.isEmpty(handshake)) {
       log.warn("No handshake key is set in webdefault.xml. "
           + "Without authentication, your service may be vulnerable "
@@ -74,7 +76,11 @@ public class EntryController extends HttpServlet {
       }
     }
 
-    String path = request.getPathTranslated();
+    /*
+     * Extracts form hash from path to identify form and entry id for
+     * identifying entries
+     */
+    String path = request.getRequestURI();
     String hash = request.getPathInfo().replace("/", "");
     String entryId = request.getParameter("EntryId");
     log.debug("POST made to " + path + ": ");
@@ -134,7 +140,7 @@ public class EntryController extends HttpServlet {
      */
 
     Entry entry = new Entry(hash, entryId, fields);
-    sc.setAttribute("entry", entry);
+    context.setAttribute("entry", entry);
 
     /*
      * Creates xml to represent the entry, beginning with the root entry element
@@ -179,8 +185,8 @@ public class EntryController extends HttpServlet {
     Document requestDoc;
     RequestBuilder builder;
     try {
-      builder = new RequestBuilder(sc, hash);
-      requestDoc = builder.buildRequest(entryDoc);
+      builder = new RequestBuilder(context, hash);
+      requestDoc = builder.buildRequestsDocument(entryDoc);
     } catch (JDOMException e) {
       String errormsg = "Exception occured while trying to parse DOM of "
           + hash + ".xsl. File may not be well-formed.";
@@ -204,13 +210,12 @@ public class EntryController extends HttpServlet {
     if (requestDoc != null) {
       builder.sendRequests();
       /*
-       * Sets the response status to OK and the response to the SysAid request
-       * XML for debugging
+       * Sets the response status code to OK and the response to the SysAid
+       * Requests XML for debugging purposes
        */
       XMLOutputter outputter = new XMLOutputter(Format.getPrettyFormat());
       StringWriter sw = new StringWriter();
       outputter.output(requestDoc, sw);
-      sw.close();
 
       String xml = sw.toString();
 
