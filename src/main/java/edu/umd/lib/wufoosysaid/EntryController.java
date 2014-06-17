@@ -177,7 +177,7 @@ public class EntryController extends HttpServlet {
      * outputs the document as a string
      */
     Document entryDoc = new Document(root);
-
+    log.debug("Entry XML: \n");
     /*
      * Creates a RequestBuilder that transforms Wufoo entry XML into SysAid
      * request XML
@@ -215,7 +215,7 @@ public class EntryController extends HttpServlet {
        */
       XMLOutputter outputter = new XMLOutputter(Format.getPrettyFormat());
       StringWriter sw = new StringWriter();
-      outputter.output(requestDoc, sw);
+      outputter.output(entryDoc, sw);
 
       String xml = sw.toString();
 

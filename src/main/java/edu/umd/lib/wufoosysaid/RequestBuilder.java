@@ -1,5 +1,6 @@
 package edu.umd.lib.wufoosysaid;
 
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -7,6 +8,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 import javax.servlet.ServletContext;
 
@@ -90,7 +92,6 @@ public class RequestBuilder {
     log.debug("XSL URL: " + xslUrl);
     SAXBuilder sax = new SAXBuilder();
     Document xsl = sax.build(xslUrl);
-    log.debug("XSL File: \n" + output.outputString(xsl));
     transformer = new XSLTransformer(xsl);
   }
 
@@ -126,7 +127,7 @@ public class RequestBuilder {
       return;
     }
 
-    List<Element> requests = root.getChildren("Request");
+    List<Element> requests = root.getChildren("request");
     URI requestURI = null;
 
     /*
@@ -204,14 +205,14 @@ public class RequestBuilder {
      */
 
     List<NameValuePair> fields = new ArrayList<NameValuePair>();
-    Element desc = req.getChild("Description");
-    Element category = req.getChild("Category");
-    Element subcategory = req.getChild("Subcategory");
-    Element title = req.getChild("Title");
-    Element campus = req.getChild("USMAICampus");
-    Element first = req.getChild("FirstName");
-    Element last = req.getChild("LastName");
-    Element email = req.getChild("Email");
+    Element desc = req.getChild("description");
+    Element category = req.getChild("category");
+    Element subcategory = req.getChild("subcategory");
+    Element title = req.getChild("title");
+    Element campus = req.getChild("usmaiCampus");
+    Element first = req.getChild("firstName");
+    Element last = req.getChild("lastName");
+    Element email = req.getChild("email");
 
     /* Request description */
     fields.add(new BasicNameValuePair("desc", desc.getText()));
@@ -237,8 +238,18 @@ public class RequestBuilder {
      * some forms.
      */
     if (campus != null) {
-      /* TODO: Test selecting of USMAI campus */
-      fields.add(new BasicNameValuePair("Campus", campus.getText()));
+      String usmai = campus.getText();
+      Properties prop = new Properties();
+      try {
+        prop.load(new FileInputStream("src/main/resources/campus.properties"));
+        String campusValue = prop.getProperty(usmai);
+        if (!StringUtils.isBlank(campusValue)) {
+          fields.add(new BasicNameValuePair("cust_list1", campusValue));
+        }
+      } catch (IOException e) {
+        log.error("Error loading campus.properties, USMAI Campus will not be "
+            + "included in request, e");
+      }
     }
     return fields;
   }
