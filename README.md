@@ -50,3 +50,6 @@ Possible Upcoming Features
 * Support for WuFoo WebHook Handshake Key
 * Easier mapping and configuration support
 
+## License
+
+[CC0](http://creativecommons.org/publicdomain/zero/1.0/)
