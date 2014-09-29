@@ -50,12 +50,12 @@ The application can be run on a tomcat instance running on a virtual machine tha
 To do this follow the following steps:
 
 1. Install Vagrant and VirtualBox.
-2. Open vagrant/Vagrantfile.
-3. Make sure that <target> in `config.vm.synced_folder "<target>", "/webapps"` points to the absolute path of `/wufoo-connector/target` on your computer ie something like `/users/user/git/wufoo-connector/target`
-4. Note the port at `host:`. This is the port that the server will be available on. Default: 4545
-5. Navigate to the vagrant folder in the root and run `vagrant up` on terminal.
-6. Go to [localhost:4545/wufoo-connector](localhost:4545/wufoo-connector) to test if the app is up.
-7. To update the app thats deployed, run `mvn publish`.
+2. Open `vagrant/Vagrantfile`.
+3. Make sure that <target> in `config.vm.synced_folder "<target>", "/webapps"`, `<target>` points to the absolute path of `/wufoo-connector/target` on your computer, ie. something like `/users/user/git/wufoo-connector/target`
+4. Note the port at `host:` under `config.vm.network:`. This is the port that the server will be available on. Default: 4545
+5. Navigate to the vagrant folder in the root and run `vagrant up` on terminal. This will download the OS for the VM, the required files and deploy the webapp on a tomcat server running on the VM.
+6. Go to [http://localhost:4545/wufoo-connector](http://localhost:4545/wufoo-connector) to access the deployed app.
+7. To update the app thats deployed, run `mvn package` from the host machine.
 
 
 

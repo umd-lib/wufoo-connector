@@ -1,7 +1,6 @@
 Vagrant.configure("2") do |config|
   config.vm.box = "chef/centos-7.0"
 
-  config.vm.synced_folder "/apps", "/apps"
   config.vm.synced_folder "defaults", "/defaults"
   
   config.vm.synced_folder "/apps/git/wufoo-connector/target", "/webapps"
