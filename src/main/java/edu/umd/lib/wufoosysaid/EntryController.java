@@ -187,10 +187,10 @@ public class EntryController extends HttpServlet {
     Document requestDoc;
     RequestBuilder builder;
     try {
-      builder = new RequestBuilder(context, hash, entryDoc);
       /*
        * passing Entry XML also as parameter to RequestBuilder
        */
+      builder = new RequestBuilder(context, hash, entryDoc);
       requestDoc = builder.getRequest();
       log.debug("Printing REQUEST DOC------------: \n"
           + output.outputString(entryDoc));
@@ -199,7 +199,7 @@ public class EntryController extends HttpServlet {
           + hash + ".xsl. File may not be well-formed.";
       log.error(errormsg, e);
       response
-      .sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, errormsg);
+          .sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, errormsg);
       return;
     } catch (MalformedURLException e) {
       String errormsg = "Malformed URL created from hash " + hash

@@ -44,7 +44,7 @@ public class RequestBuilder {
 
   private final XSLTransformer transformer;
   private Document request;
-  private String SysAidURL;
+  private String TargetURL;
 
   public RequestBuilder(ServletContext sc, String hash, Document entry)
       throws JDOMException, MalformedURLException, IOException {
@@ -98,15 +98,6 @@ public class RequestBuilder {
       }
     }
 
-    /*
-     * Extracts necessary context parameters from ServletContext. Warns if they
-     * have not been changed from their default configurations.
-     */
-
-    // this.SysAidURL = context.getInitParameter("SysAidURL");
-    // this.accountID = context.getInitParameter("accountID");
-    // this.formID = context.getInitParameter("formID");
-
   }
 
   public void getAlephRxDetails(Element req) {
@@ -116,17 +107,17 @@ public class RequestBuilder {
 
   public void getSysAidDetails(Element req) {
     /* Gets Sysaid request parameters */
-    this.SysAidURL = extractUrl(req);
+    this.TargetURL = extractUrl(req);
     this.formID = extractFormId(req);
     this.accountID = extractAccountId(req);
-    if (StringUtils.isEmpty(SysAidURL) || SysAidURL.contains("example.com")) {
-      log.warn("SysAidURL (\"" + SysAidURL
+    if (StringUtils.isEmpty(TargetURL) || TargetURL.contains("example.com")) {
+      log.warn("TargetURL (\"" + TargetURL
           + "\") appears empty or unchanged in webdefault.xml. "
           + "This value should be changed to reflect the location "
           + "of your SysAid installation");
-      SysAidURL = null;
+      TargetURL = null;
     } else {
-      log.debug("SysAidURL: " + SysAidURL);
+      log.debug("TargetURL: " + TargetURL);
     }
 
     if (StringUtils.isBlank(accountID)) {
@@ -144,18 +135,6 @@ public class RequestBuilder {
       log.debug("formID: " + formID);
     }
   }
-
-  // public Document buildRequestsDocument(Document entry) {
-  // /* Builds request xml from entry xml */
-  // try {
-  // request = transformer.transform(entry);
-  // log.debug("Request: \n" + output.outputString(request));
-  // } catch (XSLTransformException e) {
-  // log.error("Exception occured while attempting to transform XSL file.", e);
-  // return null;
-  // }
-  // return request;
-  // }
 
   public void sendRequests() throws IOException {
     /*
@@ -181,19 +160,19 @@ public class RequestBuilder {
     URI requestURI = null;
 
     /*
-     * Service only attempts to create a URI from SysAidURL if it appears
+     * Service only attempts to create a URI from TargetURL if it appears
      * legitimate, to prevent invalid requests.
      */
-    if (StringUtils.isBlank(SysAidURL)) {
-      log.warn("Specified SysAidUrl is either blank or unchanged from "
+    if (StringUtils.isBlank(TargetURL)) {
+      log.warn("Specified TargetURL is either blank or unchanged from "
           + "default value. Will not attempt to execute HTTP request with "
           + "this URI. ");
     } else {
       try {
-        requestURI = new URI(SysAidURL);
+        requestURI = new URI(TargetURL);
       } catch (URISyntaxException e) {
         log.error("Exception occured while attempting to create a URI "
-            + "object with path " + SysAidURL + ". Verify that a valid URI "
+            + "object with path " + TargetURL + ". Verify that a valid URI "
             + "is specified in configuration.", e);
       }
     }
@@ -265,9 +244,6 @@ public class RequestBuilder {
     Element target = req.getChild("target");
     List<Element> items = target.getChildren();
     Element url = items.get(0);
-    // Element formId = items.get(1);
-    // log.debug("FORM ID:-----" + formId.getText());
-    // log.debug("URL:-----" + url.getText());
 
     return url.getText();
   }
