@@ -25,6 +25,7 @@
   </context-param>
   <context-param>
     <param-name>handshakeKey</param-name>
-    <param-value></param-value>
+    <param-value>testing</param-value>
   </context-param>
 </web-app>
+

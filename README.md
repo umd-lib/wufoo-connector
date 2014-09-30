@@ -44,6 +44,20 @@ To run the web service, it must first be configured for your SysAid installation
 2. Account ID: Your organization's account ID with SysAid. It can be found under the “About” menu in your help desk.
 3. Form ID: A unique key used to authorize requests to your help desk. It will be a series of three hexadecimal numbers separated by colons. These numbers can be positive or negative and are 8, 10, and 4 digits long, respectively.
 
+### Running on Vagrant
+The application can be run on a tomcat instance running on a virtual machine that can be setup using Vagrant.
+
+To do this follow the following steps:
+
+1. Install Vagrant and VirtualBox.
+2. Open `vagrant/Vagrantfile`.
+3. Make sure that <target> in `config.vm.synced_folder "<target>", "/webapps"`, `<target>` points to the absolute path of `/wufoo-connector/target` on your computer, ie. something like `/users/user/git/wufoo-connector/target`
+4. Note the port at `host:` under `config.vm.network:`. This is the port that the server will be available on. Default: 4545
+5. Navigate to the vagrant folder in the root and run `vagrant up` on terminal. This will download the OS for the VM, the required files and deploy the webapp on a tomcat server running on the VM.
+6. Go to [http://localhost:4545/wufoo-connector](http://localhost:4545/wufoo-connector) to access the deployed app.
+7. To update the app thats deployed, run `mvn package` from the host machine.
+
+
 
 Possible Upcoming Features
 -----------------
