@@ -39,31 +39,85 @@ public class RequestBuilder {
   private static final String XSL_PATH = "/WEB-INF/xsl/%s.xsl";
 
   private final ServletContext context;
-  private final String accountID;
-  private final String formID;
+  private String accountID;
+  private String formID;
 
   private final XSLTransformer transformer;
   private Document request;
-  private String SysAidURL;
+  private String TargetURL;
 
-  public RequestBuilder(ServletContext sc, String hash) throws JDOMException,
-      MalformedURLException, IOException {
-    /*
-     * Extracts necessary context parameters from ServletContext. Warns if they
-     * have not been changed from their default configurations.
-     */
+  public RequestBuilder(ServletContext sc, String hash, Document entry)
+      throws JDOMException, MalformedURLException, IOException {
     this.context = sc;
-    this.SysAidURL = context.getInitParameter("SysAidURL");
-    this.accountID = context.getInitParameter("accountID");
-    this.formID = context.getInitParameter("formID");
-    if (StringUtils.isEmpty(SysAidURL) || SysAidURL.contains("example.com")) {
-      log.warn("SysAidURL (\"" + SysAidURL
+    /*
+     * Constructs a transformer based on the xsl file corresponding to the given
+     * form hash. This will be used to transform entry xml into request xml
+     */
+    String path = String.format(XSL_PATH, hash);
+    log.debug("Attempting to locate XSL file for hash " + hash + "at path "
+        + path);
+
+    URL xslUrl = context.getResource(path);
+    log.debug("XSL URL: " + xslUrl);
+    SAXBuilder sax = new SAXBuilder();
+    Document xsl = sax.build(xslUrl);
+    log.debug("Reading xsl document" + output.outputString(xsl));
+    transformer = new XSLTransformer(xsl);
+
+    try {
+      request = transformer.transform(entry);
+      log.debug("Request: \n" + output.outputString(request));
+    } catch (XSLTransformException e) {
+      log.error("Exception occured while attempting to transform XSL file.", e);
+    }
+    /*
+     * Extracting root element from the xsl and processing its requests
+     */
+    Element root;
+
+    try {
+      root = request.getRootElement();
+    } catch (IllegalStateException | NullPointerException e) {
+      log.error("Exception occurred while getting root element of request "
+          + "document. Will occur if sendRequests() is called before "
+          + "buildRequestsDocument()", e);
+      root = request.getRootElement();
+    }
+    /*
+     * Processing sysaid and alephrx types of requests differently
+     */
+    List<Element> requests = root.getChildren("request");
+    for (Element req : requests) {
+      if (extractTargetType(req).equals("sysaid")) {
+        log.debug("TARGET TYPE IS:----" + extractTargetType(req));
+        getSysAidDetails(req);
+
+      } else {
+        log.warn("TARGET TYPE IS:----" + extractTargetType(req));
+        getAlephRxDetails(req);
+      }
+    }
+
+  }
+
+  public void getAlephRxDetails(Element req) {
+    log.warn("This is a warning message for AlephRx requests");
+
+  }
+
+  public void getSysAidDetails(Element req) {
+    /* Gets Sysaid request parameters */
+    this.TargetURL = extractUrl(req);
+    this.formID = extractFormId(req);
+    this.accountID = extractAccountId(req);
+    if (StringUtils.isEmpty(TargetURL) || TargetURL.contains("example.com")) {
+      log.warn("TargetURL (\"" + TargetURL
           + "\") appears empty or unchanged in webdefault.xml. "
           + "This value should be changed to reflect the location "
           + "of your SysAid installation");
-      SysAidURL = null;
+      TargetURL = null;
     } else {
-      log.debug("SysAidURL: " + SysAidURL);
+      log.debug("TargetURL: " + TargetURL);
     }
 
     if (StringUtils.isBlank(accountID)) {
@@ -80,31 +134,6 @@ public class RequestBuilder {
     } else {
       log.debug("formID: " + formID);
     }
-    /*
-     * Constructs a transformer based on the xsl file corresponding to the given
-     * form hash. This will be used to transform entry xml into request xml
-     */
-    String path = String.format(XSL_PATH, hash);
-    log.debug("Attempting to locate XSL file for hash " + hash + "at path "
-        + path);
-
-    URL xslUrl = context.getResource(path);
-    log.debug("XSL URL: " + xslUrl);
-    SAXBuilder sax = new SAXBuilder();
-    Document xsl = sax.build(xslUrl);
-    transformer = new XSLTransformer(xsl);
-  }
-
-  public Document buildRequestsDocument(Document entry) {
-    /* Builds request xml from entry xml */
-    try {
-      request = transformer.transform(entry);
-      log.debug("Request: \n" + output.outputString(request));
-    } catch (XSLTransformException e) {
-      log.error("Exception occured while attempting to transform XSL file.", e);
-      return null;
-    }
-    return request;
   }
 
   public void sendRequests() throws IOException {
@@ -131,70 +160,118 @@ public class RequestBuilder {
     URI requestURI = null;
 
     /*
-     * Service only attempts to create a URI from SysAidURL if it appears
+     * Service only attempts to create a URI from TargetURL if it appears
      * legitimate, to prevent invalid requests.
      */
-    if (StringUtils.isBlank(SysAidURL)) {
-      log.warn("Specified SysAidUrl is either blank or unchanged from "
+    if (StringUtils.isBlank(TargetURL)) {
+      log.warn("Specified TargetURL is either blank or unchanged from "
           + "default value. Will not attempt to execute HTTP request with "
           + "this URI. ");
     } else {
       try {
-        requestURI = new URI(SysAidURL);
+        requestURI = new URI(TargetURL);
       } catch (URISyntaxException e) {
         log.error("Exception occured while attempting to create a URI "
-            + "object with path " + SysAidURL + ". Verify that a valid URI "
+            + "object with path " + TargetURL + ". Verify that a valid URI "
             + "is specified in configuration.", e);
       }
     }
 
     for (Element req : requests) {
-      HttpPost httpPost;
-      CloseableHttpResponse response = null;
-      if (requestURI != null) {
-        httpPost = new HttpPost(requestURI);
+      if (extractTargetType(req).equals("sysaid")) {
+        doPostSysaid(req, requestURI, httpclient);
       } else {
-        httpPost = new HttpPost();
-      }
-
-      /*
-       * Request parameters are encoded into the URL as Name-Value Pairs. To
-       * create these pairs, the element names need to be translated into the
-       * parameters expected by SysAid
-       */
-      List<NameValuePair> fields = extractFields(req);
-
-      /*
-       * Creates an entity from the list of parameters and associates it with
-       * the POST request. This request is then executed if a valid URI was
-       * constructed earlier
-       */
-      try {
-        httpPost.setEntity(new UrlEncodedFormEntity(fields, "UTF-8"));
-        if (requestURI != null) {
-          response = httpclient.execute(httpPost);
-          log.debug("Request parameters: \n" + fields);
-          log.debug("Response: \n" + response.toString());
-        }
-      } catch (ClientProtocolException e) {
-        log.error("ClientProtocolException occured while attempting to "
-            + "execute POST request. Ensure this service is properly "
-            + "configured and that the server you are attempting to make "
-            + "a request to is currently running.", e);
-      } finally {
-
-        /*
-         * Closes httpclient regardless of rather it was successful or not. If
-         * no response was received, request parameters are logged for
-         * debugging.
-         */
-        httpclient.close();
-        if (response == null) {
-          log.warn("Unable to execute POST request. Request parameters: \n"
-              + fields);
-        }
+        log.warn("This is an alephrx request warning");
       }
     }
+  }
+
+  public void doPostSysaid(Element req, URI requestURI,
+      CloseableHttpClient httpclient) throws IOException {
+    HttpPost httpPost;
+    CloseableHttpResponse response = null;
+    if (requestURI != null) {
+      httpPost = new HttpPost(requestURI);
+    } else {
+      httpPost = new HttpPost();
+    }
+
+    /*
+     * Request parameters are encoded into the URL as Name-Value Pairs. To
+     * create these pairs, the element names need to be translated into the
+     * parameters expected by SysAid
+     */
+
+    List<NameValuePair> fields = extractFields(req);
+
+    /*
+     * Creates an entity from the list of parameters and associates it with the
+     * POST request. This request is then executed if a valid URI was
+     * constructed earlier
+     */
+    try {
+      httpPost.setEntity(new UrlEncodedFormEntity(fields, "UTF-8"));
+      if (requestURI != null) {
+        response = httpclient.execute(httpPost);
+        log.debug("Request parameters: \n" + fields);
+        log.debug("Response: \n" + response.toString());
+      }
+    } catch (ClientProtocolException e) {
+      log.error("ClientProtocolException occured while attempting to "
+          + "execute POST request. Ensure this service is properly "
+          + "configured and that the server you are attempting to make "
+          + "a request to is currently running.", e);
+    } finally {
+
+      /*
+       * Closes httpclient regardless of rather it was successful or not. If no
+       * response was received, request parameters are logged for debugging.
+       */
+      httpclient.close();
+      if (response == null) {
+        log.warn("Unable to execute POST request. Request parameters: \n"
+            + fields);
+      }
+    }
+  }
+
+  public Document getRequest() {
+    return request;
+  }
+
+  protected String extractUrl(Element req) {
+    /* Extracts url from request */
+    Element target = req.getChild("target");
+    List<Element> items = target.getChildren();
+    Element url = items.get(0);
+
+    return url.getText();
+  }
+
+  protected String extractFormId(Element req) {
+    /* Extracts formId from request */
+    Element target = req.getChild("target");
+    List<Element> items = target.getChildren();
+    Element formId = items.get(1);
+
+    return formId.getText();
+  }
+
+  protected String extractAccountId(Element req) {
+    /* Extracts accountId from request */
+    Element target = req.getChild("target");
+    List<Element> items = target.getChildren();
+    Element accountId = items.get(2);
+
+    return accountId.getText();
+  }
+
+  protected String extractTargetType(Element req) {
+    /* Extracts destination target from request */
+    Element target = req.getChild("target");
+    String targetType = target.getAttributeValue("type");
+
+    return targetType;
   }
 
   protected List<NameValuePair> extractFields(Element req) {
@@ -253,4 +330,4 @@ public class RequestBuilder {
     }
     return fields;
   }
-}
+};

@@ -37,6 +37,8 @@ import org.json.XML;
 public class EntryController extends HttpServlet {
   private static final long serialVersionUID = 1L;
   private static Logger log = Logger.getLogger(EntryController.class);
+  private static XMLOutputter output = new XMLOutputter(
+      Format.getPrettyFormat());
 
   private static final String XPATH_ID = "//ID[.='%ID%']/../Label/text()|//ID[.='%ID%']/../Title[not(../SubField)]/text()";
 
@@ -177,7 +179,7 @@ public class EntryController extends HttpServlet {
      * outputs the document as a string
      */
     Document entryDoc = new Document(root);
-    log.debug("Entry XML: \n");
+    log.debug("EntryXML: \n" + output.outputString(entryDoc));
     /*
      * Creates a RequestBuilder that transforms Wufoo entry XML into SysAid
      * request XML
@@ -185,8 +187,13 @@ public class EntryController extends HttpServlet {
     Document requestDoc;
     RequestBuilder builder;
     try {
-      builder = new RequestBuilder(context, hash);
-      requestDoc = builder.buildRequestsDocument(entryDoc);
+      /*
+       * passing Entry XML also as parameter to RequestBuilder
+       */
+      builder = new RequestBuilder(context, hash, entryDoc);
+      requestDoc = builder.getRequest();
+      log.debug("Printing REQUEST DOC------------: \n"
+          + output.outputString(entryDoc));
     } catch (JDOMException e) {
       String errormsg = "Exception occured while trying to parse DOM of "
           + hash + ".xsl. File may not be well-formed.";
