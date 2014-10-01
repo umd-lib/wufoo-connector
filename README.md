@@ -1,7 +1,7 @@
 Wufoo Connector
 =========================
 
-A web service designed to automatically create help desk tickets for ticket tracking systems (example: SysAid(https://libticketingdev.umd.edu/webformsubmit?pageEncoding=utf-8) and AlephRx(https://github.com/umd-lib/alephrx/blob/develop/vm/README.md)) from entries to  [Wufoo](http://www.wufoo.com/) forms to using Wufoo's [webhooks integration](http://help.wufoo.com/articles/en_US/SurveyMonkeyArticleType/Webhooks).
+A web service designed to automatically create help desk tickets for ticket tracking systems (example: [SysAid](http://www.sysaid.com/) and [AlephRx](https://github.com/umd-lib/alephrx) from entries to  [Wufoo](http://www.wufoo.com/) forms to using Wufoo's [webhooks integration](http://help.wufoo.com/articles/en_US/SurveyMonkeyArticleType/Webhooks).
 
 **Warning**: This is development level software, and has only been tested using our installation of SysAid Server. It hasn't been tested on SysAid Cloud and may be incompatible. It also may need to be modified for use with other SysAid installations.
 
