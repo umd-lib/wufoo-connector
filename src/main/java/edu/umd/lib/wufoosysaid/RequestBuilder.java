@@ -44,7 +44,8 @@ public class RequestBuilder {
 
   private final XSLTransformer transformer;
   private Document request;
-  private String TargetURL;
+  private String SysAidURL;
+  private String AlephRxURL;
 
   public RequestBuilder(ServletContext sc, String hash, Document entry)
       throws JDOMException, MalformedURLException, IOException {
@@ -92,8 +93,8 @@ public class RequestBuilder {
         log.debug("TARGET TYPE IS:----" + extractTargetType(req));
         getSysAidDetails(req);
 
-      } else {
-        log.warn("TARGET TYPE IS:----" + extractTargetType(req));
+      } else if (extractTargetType(req).equals("alephrx")) {
+        log.debug("TARGET TYPE IS:----" + extractTargetType(req));
         getAlephRxDetails(req);
       }
     }
@@ -101,23 +102,31 @@ public class RequestBuilder {
   }
 
   public void getAlephRxDetails(Element req) {
-    log.warn("This is a warning message for AlephRx requests");
-
+    this.AlephRxURL = extractUrl(req);
+    if (StringUtils.isEmpty(AlephRxURL) || AlephRxURL.contains("example.com")) {
+      log.warn("TargetURL (\"" + AlephRxURL
+          + "\") appears empty or unchanged in webdefault.xml. "
+          + "This value should be changed to reflect the location "
+          + "of your Alephrx installation");
+      AlephRxURL = null;
+    } else {
+      log.debug("TargetURL: " + AlephRxURL);
+    }
   }
 
   public void getSysAidDetails(Element req) {
     /* Gets Sysaid request parameters */
-    this.TargetURL = extractUrl(req);
+    this.SysAidURL = extractUrl(req);
     this.formID = extractFormId(req);
     this.accountID = extractAccountId(req);
-    if (StringUtils.isEmpty(TargetURL) || TargetURL.contains("example.com")) {
-      log.warn("TargetURL (\"" + TargetURL
+    if (StringUtils.isEmpty(SysAidURL) || SysAidURL.contains("example.com")) {
+      log.warn("TargetURL (\"" + SysAidURL
           + "\") appears empty or unchanged in webdefault.xml. "
           + "This value should be changed to reflect the location "
           + "of your SysAid installation");
-      TargetURL = null;
+      SysAidURL = null;
     } else {
-      log.debug("TargetURL: " + TargetURL);
+      log.debug("TargetURL: " + SysAidURL);
     }
 
     if (StringUtils.isBlank(accountID)) {
@@ -144,7 +153,6 @@ public class RequestBuilder {
      * information to create a new request
      */
 
-    CloseableHttpClient httpclient = HttpClients.createDefault();
     Element root;
 
     try {
@@ -157,41 +165,99 @@ public class RequestBuilder {
     }
 
     List<Element> requests = root.getChildren("request");
-    URI requestURI = null;
-
+    URI requestSysAidURI = null;
+    URI requestAlephRxURI = null;
     /*
      * Service only attempts to create a URI from TargetURL if it appears
      * legitimate, to prevent invalid requests.
      */
-    if (StringUtils.isBlank(TargetURL)) {
-      log.warn("Specified TargetURL is either blank or unchanged from "
+    if (StringUtils.isBlank(SysAidURL)) {
+      log.warn("Specified SysAidURL is either blank or unchanged from "
+          + "default value. Will not attempt to execute HTTP request with "
+          + "this URI. ");
+    } else if (StringUtils.isBlank(AlephRxURL)) {
+      log.warn("Specified AlephRxURL is either blank or unchanged from "
           + "default value. Will not attempt to execute HTTP request with "
           + "this URI. ");
     } else {
       try {
-        requestURI = new URI(TargetURL);
+        requestSysAidURI = new URI(SysAidURL);
+        requestAlephRxURI = new URI(AlephRxURL);
       } catch (URISyntaxException e) {
         log.error("Exception occured while attempting to create a URI "
-            + "object with path " + TargetURL + ". Verify that a valid URI "
-            + "is specified in configuration.", e);
+            + "object with path " + SysAidURL + " or " + AlephRxURL
+            + ". Verify that a valid URI " + "is specified in configuration.",
+            e);
       }
     }
 
     for (Element req : requests) {
-      if (extractTargetType(req).equals("sysaid")) {
-        doPostSysaid(req, requestURI, httpclient);
-      } else {
-        log.warn("This is an alephrx request warning");
+      if (extractTargetType(req).equals("alephrx")) {
+        log.debug("ALPEHRX URI" + extractTargetType(req));
+        doPostAlephRx(req, requestAlephRxURI);
+      } else if (extractTargetType(req).equals("sysaid")) {
+        log.debug("Sysaid URI" + extractTargetType(req));
+        doPostSysaid(req, requestSysAidURI);
       }
     }
   }
 
-  public void doPostSysaid(Element req, URI requestURI,
-      CloseableHttpClient httpclient) throws IOException {
+  private void doPostAlephRx(Element req, URI requestAlpehRxURI)
+      throws IOException {
     HttpPost httpPost;
+    CloseableHttpClient httpclient = HttpClients.createDefault();
     CloseableHttpResponse response = null;
-    if (requestURI != null) {
-      httpPost = new HttpPost(requestURI);
+    if (requestAlpehRxURI != null) {
+      httpPost = new HttpPost(requestAlpehRxURI);
+    } else {
+      httpPost = new HttpPost();
+    }
+    /*
+     * Request parameters are encoded into the URL as Name-Value Pairs. To
+     * create these pairs, the element names need to be translated into the
+     * parameters expected by SysAid
+     */
+
+    List<NameValuePair> fields = extractAlephRxFields(req);
+    log.debug("Fields are--" + fields);
+
+    /*
+     * Creates an entity from the list of parameters and associates it with the
+     * POST request. This request is then executed if a valid URI was
+     * constructed earlier
+     */
+    try {
+      httpPost.setEntity(new UrlEncodedFormEntity(fields, "UTF-8"));
+      if (requestAlpehRxURI != null) {
+        response = httpclient.execute(httpPost);
+        log.debug("Request parameters: \n" + fields);
+        log.debug("Response: \n" + response.toString());
+      }
+    } catch (ClientProtocolException e) {
+      log.error("ClientProtocolException occured while attempting to "
+          + "execute POST request. Ensure this service is properly "
+          + "configured and that the server you are attempting to make "
+          + "a request to is currently running.", e);
+    }
+    /*
+     * Closes httpclient regardless of rather it was successful or not. If no
+     * response was received, request parameters are logged for debugging.
+     */
+    httpclient.close();
+    if (response == null) {
+      log.warn("Unable to execute POST request. Request parameters: \n"
+          + fields);
+    }
+
+  }
+
+  public void doPostSysaid(Element req, URI requestSysAidURI)
+      throws IOException {
+    HttpPost httpPost;
+    CloseableHttpClient httpclient = HttpClients.createDefault();
+    CloseableHttpResponse response = null;
+    if (requestSysAidURI != null) {
+      httpPost = new HttpPost(requestSysAidURI);
     } else {
       httpPost = new HttpPost();
     }
@@ -211,7 +277,7 @@ public class RequestBuilder {
      */
     try {
       httpPost.setEntity(new UrlEncodedFormEntity(fields, "UTF-8"));
-      if (requestURI != null) {
+      if (requestSysAidURI != null) {
         response = httpclient.execute(httpPost);
         log.debug("Request parameters: \n" + fields);
         log.debug("Response: \n" + response.toString());
@@ -221,18 +287,18 @@ public class RequestBuilder {
           + "execute POST request. Ensure this service is properly "
           + "configured and that the server you are attempting to make "
           + "a request to is currently running.", e);
-    } finally {
-
-      /*
-       * Closes httpclient regardless of rather it was successful or not. If no
-       * response was received, request parameters are logged for debugging.
-       */
-      httpclient.close();
-      if (response == null) {
-        log.warn("Unable to execute POST request. Request parameters: \n"
-            + fields);
-      }
     }
+
+    /*
+     * Closes httpclient regardless of rather it was successful or not. If no
+     * response was received, request parameters are logged for debugging.
+     */
+    httpclient.close();
+    if (response == null) {
+      log.warn("Unable to execute POST request. Request parameters: \n"
+          + fields);
+    }
+
   }
 
   public Document getRequest() {
@@ -272,6 +338,53 @@ public class RequestBuilder {
     String targetType = target.getAttributeValue("type");
 
     return targetType;
+  }
+
+  protected List<NameValuePair> extractAlephRxFields(Element req) {
+    List<NameValuePair> fields = new ArrayList<NameValuePair>();
+    Element name = req.getChild("name");
+    Element functional_area = req.getChild("functional_area");
+    Element campus = req.getChild("campus");
+    Element phone = req.getChild("phone");
+    Element email = req.getChild("email");
+    Element status = req.getChild("status");
+    Element summary = req.getChild("summary");
+    Element text = req.getChild("text");
+    Element submitter_name = req.getChild("submitter_name");
+
+    // fields.add(new BasicNameValuePair("report", report.getText()));
+    fields.add(new BasicNameValuePair("name", name.getText()));
+    fields.add(new BasicNameValuePair("functional_area", functional_area
+        .getText()));
+    fields.add(new BasicNameValuePair("campus", campus.getText()));
+    fields.add(new BasicNameValuePair("phone", phone.getText()));
+    fields.add(new BasicNameValuePair("email", email.getText()));
+    fields.add(new BasicNameValuePair("status", status.getText()));
+    fields.add(new BasicNameValuePair("summary", summary.getText()));
+    fields.add(new BasicNameValuePair("text", text.getText()));
+    fields.add(new BasicNameValuePair("submitter_name", submitter_name
+        .getText()));
+
+    /*
+     * The relevant USMAI campus for the request, will only be applicable for
+     * some forms.
+     */
+    if (campus != null) {
+      String usmai = campus.getText();
+      Properties prop = new Properties();
+      try {
+        prop.load(new FileInputStream("src/main/resources/campus.properties"));
+        String campusValue = prop.getProperty(usmai);
+        if (!StringUtils.isBlank(campusValue)) {
+          fields.add(new BasicNameValuePair("cust_list1", campusValue));
+        }
+      } catch (IOException e) {
+        log.error("Error loading campus.properties, USMAI Campus will not be "
+            + "included in request, e");
+      }
+    }
+
+    return fields;
   }
 
   protected List<NameValuePair> extractFields(Element req) {
