@@ -2,10 +2,8 @@ package edu.umd.lib.wufoosysaid;
 
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -24,8 +22,6 @@ import org.apache.http.message.BasicNameValuePair;
 import org.apache.log4j.Logger;
 import org.jdom2.Document;
 import org.jdom2.Element;
-import org.jdom2.JDOMException;
-import org.jdom2.input.SAXBuilder;
 import org.jdom2.output.Format;
 import org.jdom2.output.XMLOutputter;
 import org.jdom2.transform.XSLTransformException;
@@ -36,8 +32,6 @@ public class RequestBuilder {
   private static XMLOutputter output = new XMLOutputter(
       Format.getPrettyFormat());
 
-  private static final String XSL_PATH = "/WEB-INF/xsl/%s.xsl";
-
   private final ServletContext context;
   private final String accountID;
   private final String formID;
@@ -46,8 +40,14 @@ public class RequestBuilder {
   private Document request;
   private String SysAidURL;
 
-  public RequestBuilder(ServletContext sc, String hash) throws JDOMException,
-      MalformedURLException, IOException {
+  /**
+   * @param sc
+   * @param hash
+   * @throws XSLTransformException
+   * @throws Exception
+   */
+  public RequestBuilder(ServletContext sc, String hash) throws IOException,
+      XSLTransformException {
     /*
      * Extracts necessary context parameters from ServletContext. Warns if they
      * have not been changed from their default configurations.
@@ -81,17 +81,14 @@ public class RequestBuilder {
       log.debug("formID: " + formID);
     }
     /*
-     * Constructs a transformer based on the xsl file corresponding to the given
-     * form hash. This will be used to transform entry xml into request xml
+     * Constructs a transformer using the xsl document that the XSLGetter class
+     * provides based on the form hash. This will be used to transform entry xml
+     * to request xml.
      */
-    String path = String.format(XSL_PATH, hash);
-    log.debug("Attempting to locate XSL file for hash " + hash + "at path "
-        + path);
-
-    URL xslUrl = context.getResource(path);
-    log.debug("XSL URL: " + xslUrl);
-    SAXBuilder sax = new SAXBuilder();
-    Document xsl = sax.build(xslUrl);
+    Document xsl = XSLGetter.getXSLDocument(context, hash);
+    if (xsl == null) {
+      throw new IOException();
+    }
     transformer = new XSLTransformer(xsl);
   }
 

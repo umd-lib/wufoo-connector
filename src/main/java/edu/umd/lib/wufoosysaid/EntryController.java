@@ -194,7 +194,7 @@ public class EntryController extends HttpServlet {
           + hash + ".xsl. File may not be well-formed.";
       log.error(errormsg, e);
       response
-          .sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, errormsg);
+      .sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, errormsg);
       return;
     } catch (MalformedURLException e) {
       String errormsg = "Malformed URL created from hash " + hash
