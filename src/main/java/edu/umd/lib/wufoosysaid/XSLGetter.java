@@ -30,7 +30,7 @@ public class XSLGetter {
        * from filesystem.
        */
       String XSL_PATH = new File(context.getRealPath(context.getContextPath()))
-          .getParent() + "/xsls/%s.xsl";
+      .getParent() + "/xsls/%s.xsl";
 
       String xslPath = String.format(XSL_PATH, hash);
       log.debug("Attempting to locate XSL file for hash " + hash + "at path "

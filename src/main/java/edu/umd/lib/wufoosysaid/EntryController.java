@@ -187,8 +187,13 @@ public class EntryController extends HttpServlet {
     Document requestDoc;
     RequestBuilder builder;
     try {
-      builder = new RequestBuilder(context, hash);
-      requestDoc = builder.buildRequestsDocument(entryDoc);
+      /*
+       * passing Entry XML also as parameter to RequestBuilder
+       */
+      builder = new RequestBuilder(context, hash, entryDoc);
+      requestDoc = builder.getRequest();
+      log.debug("Printing REQUEST DOC------------: \n"
+          + output.outputString(entryDoc));
     } catch (JDOMException e) {
       String errormsg = "Exception occured while trying to parse DOM of "
           + hash + ".xsl. File may not be well-formed.";
