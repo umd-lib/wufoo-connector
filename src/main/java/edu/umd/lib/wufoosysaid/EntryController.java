@@ -179,7 +179,7 @@ public class EntryController extends HttpServlet {
      * outputs the document as a string
      */
     Document entryDoc = new Document(root);
-    log.debug("EntryXML: \n" + output.outputString(entryDoc));
+    log.debug("Entry XML: \n" + output.outputString(entryDoc));
     /*
      * Creates a RequestBuilder that transforms Wufoo entry XML into SysAid
      * request XML
@@ -199,7 +199,7 @@ public class EntryController extends HttpServlet {
           + hash + ".xsl. File may not be well-formed.";
       log.error(errormsg, e);
       response
-          .sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, errormsg);
+      .sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, errormsg);
       return;
     } catch (MalformedURLException e) {
       String errormsg = "Malformed URL created from hash " + hash
