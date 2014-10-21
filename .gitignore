@@ -4,3 +4,4 @@ target
 .settings/
 bin/
 /src/main/resources/webdefault.xml
+.vagrant
