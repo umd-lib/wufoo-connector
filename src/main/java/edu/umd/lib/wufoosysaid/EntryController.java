@@ -58,7 +58,9 @@ public class EntryController extends HttpServlet {
      * a handshake key was specified in the configuration. If not yet
      * configured, user is warned of security risk
      */
+
     String handshake = context.getInitParameter("handshakeKey");
+
     if (StringUtils.isEmpty(handshake)) {
       log.warn("No handshake key is set in webdefault.xml. "
           + "Without authentication, your service may be vulnerable "
@@ -85,7 +87,7 @@ public class EntryController extends HttpServlet {
     String path = request.getRequestURI();
     String hash = request.getPathInfo().replace("/", "");
     String entryId = request.getParameter("EntryId");
-    log.debug("POST made to " + path + ": ");
+    log.debug("POST path: " + path);
     log.debug("Hash of " + hash + " extracted.");
 
     /*

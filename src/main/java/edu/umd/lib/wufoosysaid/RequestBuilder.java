@@ -2,6 +2,7 @@ package edu.umd.lib.wufoosysaid;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -32,114 +33,115 @@ public class RequestBuilder {
   private static XMLOutputter output = new XMLOutputter(
       Format.getPrettyFormat());
 
-  private final ServletContext context;
-  private String accountID;
-  private String formID;
+  private String sysaid_URL;
+  private String sysaid_accountID;
+  private String sysaid_formID;
+  private URI requestSysAidURI = null;
 
-  private final XSLTransformer transformer;
-  private Document request;
-  private String SysAidURL;
-  private String AlephRxURL;
+  private String alephrx_URL;
+  private URI requestAlephRxURI = null;
+
+  private XSLTransformer xsl_transformer;
+  private Document request_document;
+
+  private ServletContext context;
 
   /**
    * @param sc
-   * @param hash
+   * @param xsl_hash
+   * @param entry_document
    */
-  public RequestBuilder(ServletContext sc, String hash, Document entry)
-      throws IOException, XSLTransformException {
+  public RequestBuilder(ServletContext sc, String xsl_hash,
+      Document entry_document) throws IOException, XSLTransformException {
     this.context = sc;
     /*
      * Constructs a transformer using the xsl document that the XSLGetter class
      * provides based on the form hash. This will be used to transform entry xml
      * to request xml.
      */
-    Document xsl = XSLGetter.getXSLDocument(context, hash);
-    if (xsl == null) {
-      throw new IOException();
-    }
-    transformer = new XSLTransformer(xsl);
+    Document xsl_document = XSLGetter.getXSLDocument(context, xsl_hash);
 
-    try {
-      request = transformer.transform(entry);
-      log.debug("Request: \n" + output.outputString(request));
-    } catch (XSLTransformException e) {
-      log.error("Exception occured while attempting to transform XSL file.", e);
-    }
-    /*
-     * Extracting root element from the xsl and processing its requests
-     */
-    Element root;
-
-    try {
-      root = request.getRootElement();
-    } catch (IllegalStateException | NullPointerException e) {
-      log.error("Exception occurred while getting root element of request "
-          + "document. Will occur if sendRequests() is called before "
-          + "buildRequestsDocument()", e);
-      root = request.getRootElement();
-    }
-    /*
-     * Processing sysaid and alephrx types of requests differently
-     */
-    List<Element> requests = root.getChildren("request");
-    for (Element req : requests) {
-      if (extractTargetType(req).equals("sysaid")) {
-        log.debug("TARGET TYPE IS:----" + extractTargetType(req));
-        getSysAidDetails(req);
-
-      } else if (extractTargetType(req).equals("alephrx")) {
-        log.debug("TARGET TYPE IS:----" + extractTargetType(req));
-        getAlephRxDetails(req);
+    if (xsl_document != null) {
+      xsl_transformer = new XSLTransformer(xsl_document);
+      try {
+        request_document = xsl_transformer.transform(entry_document);
+        log.debug("Request Document: \n"
+            + output.outputString(request_document));
+      } catch (XSLTransformException e) {
+        log.error("Exception occured while attempting to transform XSL file.",
+            e);
       }
-    }
 
-  }
-
-  public void getAlephRxDetails(Element req) {
-    this.AlephRxURL = extractUrl(req);
-    if (StringUtils.isEmpty(AlephRxURL) || AlephRxURL.contains("example.com")) {
-      log.warn("TargetURL (\"" + AlephRxURL
-          + "\") appears empty or unchanged in webdefault.xml. "
-          + "This value should be changed to reflect the location "
-          + "of your Alephrx installation");
-      AlephRxURL = null;
+      // Extracting root element from the xsl and processing its requests
+      Element root_element = request_document.getRootElement();
+      List<Element> requests = root_element.getChildren("request");
+      for (Element req : requests) {
+        extractParams(req);
+      }
     } else {
-      log.debug("TargetURL: " + AlephRxURL);
+      // create sample xsl
+      request_document = null;
     }
   }
 
-  public void getSysAidDetails(Element req) {
-    /* Gets Sysaid request parameters */
-    this.SysAidURL = extractUrl(req);
-    this.formID = extractFormId(req);
-    this.accountID = extractAccountId(req);
-    if (StringUtils.isEmpty(SysAidURL) || SysAidURL.contains("example.com")) {
-      log.warn("TargetURL (\"" + SysAidURL
-          + "\") appears empty or unchanged in webdefault.xml. "
-          + "This value should be changed to reflect the location "
-          + "of your SysAid installation");
-      SysAidURL = null;
-    } else {
-      log.debug("TargetURL: " + SysAidURL);
-    }
+  private void extractParams(Element req) {
+    if (extractTargetType(req).equals("sysaid")) {
+      log.debug("TARGET TYPE IS:----" + extractTargetType(req));
+      /* Gets Sysaid request parameters */
+      String tmp_url = extractUrl(req);
+      String tmp_formID = extractFormId(req);
+      String tmp_accountID = extractAccountId(req);
 
-    if (StringUtils.isBlank(accountID)) {
-      log.warn("accountID appears empty or unchanged in webdefault.xml. "
-          + "This value should be changed to your SysAid account id.");
-    } else {
-      log.debug("accountID: " + accountID);
-    }
+      if (StringUtils.isEmpty(tmp_url) || tmp_url.contains("example.com")) {
+        log.warn("TargetURL (\""
+            + tmp_url
+            + "\") appears empty or unchanged in SYSAID request element in your xsl. "
+            + "This value should be changed to reflect the location "
+            + "of your SYSAID installation");
+      } else {
+        this.sysaid_URL = tmp_url;
+        log.debug("TargetURL: " + sysaid_URL);
+      }
 
-    if (StringUtils.isBlank(formID) || StringUtils.equals(formID, "0")) {
-      log.warn("formID appears empty or unchanged in webdefault.xml. "
-          + "This value should be changed so that your requests will be "
-          + "properly authorized and accepted.");
+      if (StringUtils.isBlank(tmp_formID)
+          || StringUtils.equals(tmp_formID, "0")) {
+        log.warn("formID appears empty or unchanged in SYSAID request element in your xsl. "
+            + "This value should be changed so that your requests will be "
+            + "properly authorized and accepted BY SYSAID.");
+      } else {
+        this.sysaid_formID = tmp_formID;
+        log.debug("formID: " + sysaid_formID);
+      }
+
+      if (StringUtils.isBlank(tmp_accountID)) {
+        log.warn("accountID appears empty or unchanged in SYSAID request element in your xsl. "
+            + "This value should be changed to your SYSAID account id.");
+      } else {
+        this.sysaid_accountID = tmp_accountID;
+        log.debug("accountID: " + sysaid_accountID);
+      }
+    } /* Get AlephRx request parameters */
+    else if (extractTargetType(req).equals("alephrx")) {
+      log.debug("TARGET TYPE IS:----" + extractTargetType(req));
+      String tmp_url = extractUrl(req);
+
+      if (StringUtils.isEmpty(tmp_url) || tmp_url.contains("example.com")) {
+        log.warn("TargetURL (\""
+            + tmp_url
+            + "\") appears empty or unchanged in ALEPHRX request element in your xsl. "
+            + "This value should be changed to reflect the location "
+            + "of your ALEPHRX installation");
+      } else {
+        this.alephrx_URL = tmp_url;
+        log.debug("TargetURL: " + alephrx_URL);
+      }
     } else {
-      log.debug("formID: " + formID);
+      log.debug("NO TARGET DEFINED IN REQUEST");
     }
   }
 
   public void sendRequests() throws IOException {
+
     /*
      * Transforms each request element in the sysaid xml into a HTTP POST
      * request that has the parameters for a sysaid request encoded in the URL.
@@ -147,156 +149,163 @@ public class RequestBuilder {
      * information to create a new request
      */
 
-    Element root;
-
-    try {
-      root = request.getRootElement();
-    } catch (IllegalStateException | NullPointerException e) {
-      log.error("Exception occurred while getting root element of request "
-          + "document. Will occur if sendRequests() is called before "
-          + "buildRequestsDocument()", e);
-      return;
-    }
-
+    Element root = request_document.getRootElement();
     List<Element> requests = root.getChildren("request");
-    URI requestSysAidURI = null;
-    URI requestAlephRxURI = null;
     /*
      * Service only attempts to create a URI from TargetURL if it appears
      * legitimate, to prevent invalid requests.
      */
-    if (StringUtils.isBlank(SysAidURL)) {
-      log.warn("Specified SysAidURL is either blank or unchanged from "
-          + "default value. Will not attempt to execute HTTP request with "
-          + "this URI. ");
-    } else if (StringUtils.isBlank(AlephRxURL)) {
-      log.warn("Specified AlephRxURL is either blank or unchanged from "
-          + "default value. Will not attempt to execute HTTP request with "
-          + "this URI. ");
+    if (StringUtils.isBlank(sysaid_URL)) {
+      log.warn("Specified SYSAID URL is either blank or unchanged from "
+          + "default value. Can't create URI with this URL. Will not attempt to execute HTTP request.");
     } else {
       try {
-        requestSysAidURI = new URI(SysAidURL);
-        requestAlephRxURI = new URI(AlephRxURL);
+        this.requestSysAidURI = new URI(sysaid_URL);
       } catch (URISyntaxException e) {
-        log.error("Exception occured while attempting to create a URI "
-            + "object with path " + SysAidURL + " or " + AlephRxURL
-            + ". Verify that a valid URI " + "is specified in configuration.",
-            e);
+        log.error("Exception occured while attempting to create SYSAID URI "
+            + "object with path " + sysaid_URL + ". Verify that a valid URI "
+            + "is specified in configuration.", e);
+        return;
+      }
+    }
+
+    if (StringUtils.isBlank(alephrx_URL)) {
+      log.warn("Specified ALEPHRX URL is either blank or unchanged from "
+          + "default value. Can't create URI with this URL. Will not attempt to execute HTTP request.");
+    } else {
+      try {
+        this.requestAlephRxURI = new URI(alephrx_URL);
+      } catch (URISyntaxException e) {
+        log.error("Exception occured while attempting to create ALEPHRX URI "
+            + "object with path " + alephrx_URL + ". Verify that a valid URI "
+            + "is specified in configuration.", e);
+        return;
       }
     }
 
     for (Element req : requests) {
-      if (extractTargetType(req).equals("alephrx")) {
-        log.debug("ALPEHRX URI" + extractTargetType(req));
-        doPostAlephRx(req, requestAlephRxURI);
-      } else if (extractTargetType(req).equals("sysaid")) {
-        log.debug("Sysaid URI" + extractTargetType(req));
-        doPostSysaid(req, requestSysAidURI);
-      }
+      processPostRequest(req);
     }
   }
 
-  private void doPostAlephRx(Element req, URI requestAlpehRxURI)
-      throws IOException {
-    HttpPost httpPost;
-    CloseableHttpClient httpclient = HttpClients.createDefault();
-    CloseableHttpResponse response = null;
-    if (requestAlpehRxURI != null) {
-      httpPost = new HttpPost(requestAlpehRxURI);
-    } else {
-      httpPost = new HttpPost();
-    }
-    /*
-     * Request parameters are encoded into the URL as Name-Value Pairs. To
-     * create these pairs, the element names need to be translated into the
-     * parameters expected by SysAid
-     */
+  private void processPostRequest(Element req) {
+    if (extractTargetType(req).equals("sysaid")) {
+      log.debug("SYSAID URI: " + extractTargetType(req));
+      try {
+        CloseableHttpClient httpclient = HttpClients.createDefault();
+        CloseableHttpResponse response = null;
 
-    List<NameValuePair> fields = extractAlephRxFields(req);
-    log.debug("Fields are--" + fields);
+        if (this.requestSysAidURI != null) {
+          /*
+           * Request parameters are encoded into the URL as Name-Value Pairs. To
+           * create these pairs, the element names need to be translated into
+           * the parameters expected by SysAid
+           */
+          /*
+           * Creates an entity from the list of parameters and associates it
+           * with the POST request. This request is then executed if a valid URI
+           * was constructed earlier
+           */
+          /*
+           * Closes httpclient regardless of rather it was successful or not. If
+           * no response was received, request parameters are logged for
+           * debugging.
+           */
 
-    /*
-     * Creates an entity from the list of parameters and associates it with the
-     * POST request. This request is then executed if a valid URI was
-     * constructed earlier
-     */
-    try {
-      httpPost.setEntity(new UrlEncodedFormEntity(fields, "UTF-8"));
-      if (requestAlpehRxURI != null) {
-        response = httpclient.execute(httpPost);
-        log.debug("Request parameters: \n" + fields);
-        log.debug("Response: \n" + response.toString());
+          HttpPost httpPost = new HttpPost(requestSysAidURI);
+
+          List<NameValuePair> fields = extractFields_SysAid(req);
+          log.debug("Request parameters: \n" + fields);
+
+          httpPost.setEntity(new UrlEncodedFormEntity(fields, "UTF-8"));
+          response = httpclient.execute(httpPost);
+          httpclient.close();
+
+          if (response != null) {
+            log.debug("Response: \n" + response.toString());
+          } else {
+            log.warn("Unable to execute POST request.\nRequest parameters: \n"
+                + fields);
+          }
+          response = null;
+          httpPost = null;
+          httpclient = null;
+        } else {
+          log.error("requestSysAidURI empty!");
+          return;
+        }
+      } catch (ClientProtocolException e) {
+        log.error("ClientProtocolException occured while attempting to "
+            + "execute POST request. Ensure this service is properly "
+            + "configured and that the server you are attempting to make "
+            + "a request to is currently running.", e);
+      } catch (UnsupportedEncodingException e) {
+        e.printStackTrace();
+      } catch (IOException e) {
+        e.printStackTrace();
       }
-    } catch (ClientProtocolException e) {
-      log.error("ClientProtocolException occured while attempting to "
-          + "execute POST request. Ensure this service is properly "
-          + "configured and that the server you are attempting to make "
-          + "a request to is currently running.", e);
-    }
-    /*
-     * Closes httpclient regardless of rather it was successful or not. If no
-     * response was received, request parameters are logged for debugging.
-     */
-    httpclient.close();
-    if (response == null) {
-      log.warn("Unable to execute POST request. Request parameters: \n"
-          + fields);
-    }
+    } else if (extractTargetType(req).equals("alephrx")) {
+      log.debug("ALEPHRX URI: " + extractTargetType(req));
+      try {
+        CloseableHttpClient httpclient = HttpClients.createDefault();
+        CloseableHttpResponse response = null;
 
-  }
+        if (this.requestAlephRxURI != null) {
+          /*
+           * Request parameters are encoded into the URL as Name-Value Pairs. To
+           * create these pairs, the element names need to be translated into
+           * the parameters expected by SysAid
+           */
+          /*
+           * Creates an entity from the list of parameters and associates it
+           * with the POST request. This request is then executed if a valid URI
+           * was constructed earlier
+           */
+          /*
+           * Closes httpclient regardless of rather it was successful or not. If
+           * no response was received, request parameters are logged for
+           * debugging.
+           */
 
-  public void doPostSysaid(Element req, URI requestSysAidURI)
-      throws IOException {
-    HttpPost httpPost;
-    CloseableHttpClient httpclient = HttpClients.createDefault();
-    CloseableHttpResponse response = null;
-    if (requestSysAidURI != null) {
-      httpPost = new HttpPost(requestSysAidURI);
-    } else {
-      httpPost = new HttpPost();
-    }
+          HttpPost httpPost = new HttpPost(requestAlephRxURI);
 
-    /*
-     * Request parameters are encoded into the URL as Name-Value Pairs. To
-     * create these pairs, the element names need to be translated into the
-     * parameters expected by SysAid
-     */
+          List<NameValuePair> fields = extractFields_AlephRX(req);
+          log.debug("Request parameters: \n" + fields);
 
-    List<NameValuePair> fields = extractFields(req);
+          httpPost.setEntity(new UrlEncodedFormEntity(fields, "UTF-8"));
+          response = httpclient.execute(httpPost);
+          httpclient.close();
 
-    /*
-     * Creates an entity from the list of parameters and associates it with the
-     * POST request. This request is then executed if a valid URI was
-     * constructed earlier
-     */
-    try {
-      httpPost.setEntity(new UrlEncodedFormEntity(fields, "UTF-8"));
-      if (requestSysAidURI != null) {
-        response = httpclient.execute(httpPost);
-        log.debug("Request parameters: \n" + fields);
-        log.debug("Response: \n" + response.toString());
+          if (response != null) {
+            log.debug("Response: \n" + response.toString());
+          } else {
+            log.warn("Unable to execute POST request.\nRequest parameters: \n"
+                + fields);
+          }
+          response = null;
+          httpPost = null;
+          httpclient = null;
+        } else {
+          log.error("requestAlephRxURI empty!");
+          return;
+        }
+      } catch (ClientProtocolException e) {
+        log.error("ClientProtocolException occured while attempting to "
+            + "execute POST request. Ensure this service is properly "
+            + "configured and that the server you are attempting to make "
+            + "a request to is currently running.", e);
+      } catch (UnsupportedEncodingException e) {
+        e.printStackTrace();
+      } catch (IOException e) {
+        e.printStackTrace();
       }
-    } catch (ClientProtocolException e) {
-      log.error("ClientProtocolException occured while attempting to "
-          + "execute POST request. Ensure this service is properly "
-          + "configured and that the server you are attempting to make "
-          + "a request to is currently running.", e);
+    } else {
+      log.debug("NO TARGET DEFINED IN REQUEST");
     }
-
-    /*
-     * Closes httpclient regardless of rather it was successful or not. If no
-     * response was received, request parameters are logged for debugging.
-     */
-    httpclient.close();
-    if (response == null) {
-      log.warn("Unable to execute POST request. Request parameters: \n"
-          + fields);
-    }
-
   }
 
   public Document getRequest() {
-    return request;
+    return request_document;
   }
 
   protected String extractUrl(Element req) {
@@ -334,7 +343,7 @@ public class RequestBuilder {
     return targetType;
   }
 
-  protected List<NameValuePair> extractAlephRxFields(Element req) {
+  protected List<NameValuePair> extractFields_AlephRX(Element req) {
     List<NameValuePair> fields = new ArrayList<NameValuePair>();
     Element name = req.getChild("name");
     Element functional_area = req.getChild("functional_area");
@@ -381,7 +390,7 @@ public class RequestBuilder {
     return fields;
   }
 
-  protected List<NameValuePair> extractFields(Element req) {
+  protected List<NameValuePair> extractFields_SysAid(Element req) {
     /*
      * Constructs a list of parameters from a Request element. These parameters
      * follow the format used by SysAid to submit webforms and can be used to
@@ -402,8 +411,8 @@ public class RequestBuilder {
     fields.add(new BasicNameValuePair("desc", desc.getText()));
 
     /* Used for authentication */
-    fields.add(new BasicNameValuePair("accountID", accountID));
-    fields.add(new BasicNameValuePair("formID", formID));
+    fields.add(new BasicNameValuePair("accountID", sysaid_accountID));
+    fields.add(new BasicNameValuePair("formID", sysaid_formID));
 
     /* Category and Subcategory */
     fields.add(new BasicNameValuePair("problem_type", category.getText()));
