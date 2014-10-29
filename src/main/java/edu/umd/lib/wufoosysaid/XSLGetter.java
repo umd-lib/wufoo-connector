@@ -29,7 +29,7 @@ public class XSLGetter {
        * Getting the xsl from ../xsls/. Get out from the webapp and fetch XSL
        * from filesystem.
        */
-      String XSL_PATH = context.getInitParameter("xslPath") + "/%s.xsl";
+      String XSL_PATH = context.getInitParameter("xslLocation") + "/%s.xsl";
       System.out.println("XSL:" + XSL_PATH);
 
       String xslPath = String.format(XSL_PATH, hash);

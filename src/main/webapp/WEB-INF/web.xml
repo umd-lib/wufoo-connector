@@ -14,7 +14,7 @@
     <param-value>testing</param-value>
   </context-param>
   <context-param>
-    <param-name>xslPath</param-name>
+    <param-name>xslLocation</param-name>
     <param-value>/apps/apache-tomcat-7.0.56/webapps/xsls</param-value>
   </context-param>
 </web-app>

@@ -43,7 +43,7 @@ public class DownloadFile extends HttpServlet implements javax.servlet.Servlet {
     /**
      * Get XSL file path from web.xml and filename from Upload.jsp in request
      */
-    String filePath = sc.getInitParameter("xslPath");
+    String filePath = sc.getInitParameter("xslLocation");
     String filename = request.getParameter("filename");
 
     /**

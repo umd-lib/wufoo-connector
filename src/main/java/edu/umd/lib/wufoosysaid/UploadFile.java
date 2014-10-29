@@ -57,13 +57,16 @@ public class UploadFile extends HttpServlet {
      * Get XSL file path from web.xml
      */
 
-    XSL_PATH_File = getServletContext().getInitParameter("xslPath");
+    XSL_PATH_File = getServletContext().getInitParameter("xslLocation");
 
     response.setContentType("text/html");
     PrintWriter out = response.getWriter();
 
     System.out.println("PATH XSL:" + XSL_PATH_File);
 
+    /**
+     * File upload logic
+     */
     boolean isMultipartContent = ServletFileUpload.isMultipartContent(request);
     FileItemFactory factory = new DiskFileItemFactory();
     ServletFileUpload upload = new ServletFileUpload(factory);

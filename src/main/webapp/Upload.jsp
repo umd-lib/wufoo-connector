@@ -1,3 +1,6 @@
+<!--
+This is the admin interface for Wufoo-connector to anabe upload and download of xsl files. 
+ -->
 <%@ page language="java" contentType="text/html; charset=ISO-8859-1" pageEncoding="ISO-8859-1"%>
 
 <%@ page import="java.io.BufferedReader" %>
@@ -31,6 +34,9 @@ $(document).ready(function(){
 <body> 
 <h2 align="center"> Wufoo-Connector</h2>
 <h4 align="center"> Admin Interface for Upload and Download of XSLs</h4>
+<%
+String XSL_PATH_File = getServletContext().getInitParameter("xslLocation");
+%>
 <div class="container">
    <div class="row" style="margin-top:50px;">
         <div class="col-md-4"></div>
@@ -39,7 +45,7 @@ $(document).ready(function(){
                  <select class="form-control" id="selectBoxId">
                  <option value="" default selected>Select XSL</option>
                 <%
-                    File folder = new File("/apps/apache-tomcat-7.0.56/webapps/xsls/");
+                    File folder = new File(XSL_PATH_File);
                     File[] listOfFiles = folder.listFiles();
 
                     for (File file : listOfFiles) {
