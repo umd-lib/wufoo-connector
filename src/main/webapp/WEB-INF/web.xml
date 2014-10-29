@@ -11,4 +11,8 @@
     <servlet-name>EntryController</servlet-name>
     <url-pattern>/entry/*</url-pattern>
   </servlet-mapping>
+  <context-param>
+    <param-name>xslLocation</param-name>
+    <param-value>/Users/rohit89/Desktop/xsls/</param-value>
+  </context-param>
 </web-app>

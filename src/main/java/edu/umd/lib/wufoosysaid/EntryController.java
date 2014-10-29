@@ -1,7 +1,6 @@
 package edu.umd.lib.wufoosysaid;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.MalformedURLException;
@@ -60,14 +59,14 @@ public class EntryController extends HttpServlet {
      */
     String handshake = context.getInitParameter("handshakeKey");
     if (StringUtils.isEmpty(handshake)) {
-      log.warn("No handshake key is set in webdefault.xml. "
+      log.warn("No handshake key is set in handshake.xml. "
           + "Without authentication, your service may be vulnerable "
           + "to spam and other attacks.");
     } else {
       String requestKey = request.getParameter("HandshakeKey");
       if (StringUtils.isEmpty(requestKey)) {
         String error = "Handshake key is missing from request. Make sure "
-            + "Wufoo form notifications are properly configured";
+            + "form notifications are properly configured";
         response.sendError(HttpServletResponse.SC_BAD_REQUEST, error);
         return;
       } else if (!StringUtils.equals(handshake, requestKey)) {
@@ -109,7 +108,18 @@ public class EntryController extends HttpServlet {
      * so it can be properly converted to XML (it is passed as JSON). This will
      * be used to extract the titles of fields
      */
-    String fieldStructure = parameterMap.get("FieldStructure")[0];
+    String fieldStructure = null;
+    try {
+      fieldStructure = parameterMap.get("FieldStructure")[0];
+    } catch (NullPointerException e) {
+      log.error(
+          "Error in Wufoo Form Webhook configuration, check the chbox for including field structures",
+          e);
+      response
+      .sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+          "Error in Wufoo Form Webhook configuration, can't find field structures");
+      return;
+    }
     fieldStructure = fieldStructure.replaceAll("Fields", "Field");
 
     /*
@@ -136,6 +146,7 @@ public class EntryController extends HttpServlet {
           "Error in coverting fieldStructure into XML");
       return;
     }
+    // log.debug("Structure XML: \n" + output.outputString(structure));
 
     /*
      * Creates a new Entry with the form hash, entry id, and field values
@@ -187,13 +198,8 @@ public class EntryController extends HttpServlet {
     Document requestDoc;
     RequestBuilder builder;
     try {
-      /*
-       * passing Entry XML also as parameter to RequestBuilder
-       */
       builder = new RequestBuilder(context, hash, entryDoc);
       requestDoc = builder.getRequest();
-      log.debug("Printing REQUEST DOC------------: \n"
-          + output.outputString(entryDoc));
     } catch (JDOMException e) {
       String errormsg = "Exception occured while trying to parse DOM of "
           + hash + ".xsl. File may not be well-formed.";
@@ -214,28 +220,29 @@ public class EntryController extends HttpServlet {
       response.sendError(HttpServletResponse.SC_NOT_FOUND, errormsg);
       return;
     }
+
     if (requestDoc != null) {
+      log.debug("Printing REQUEST DOC------------: \n"
+          + output.outputString(requestDoc));
       builder.sendRequests();
       /*
        * Sets the response status code to OK and the response to the SysAid
        * Requests XML for debugging purposes
        */
-      XMLOutputter outputter = new XMLOutputter(Format.getPrettyFormat());
       StringWriter sw = new StringWriter();
-      outputter.output(entryDoc, sw);
-
-      String xml = sw.toString();
+      output.output(entryDoc, sw);
 
       response.setCharacterEncoding("UTF-8");
       response.setContentType("text/xml");
-
-      PrintWriter writer = response.getWriter();
-      writer.write(xml);
+      response.getWriter().write(sw.toString());
       response.setStatus(HttpServletResponse.SC_OK);
     } else {
       response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
           "Error occured while attempting to create requests from entry.");
-    }
+      // BAD TEMPORARY FIX, Exit if no XSL was found!
+      // (To avoid multiple do post requests by container)
 
+      System.exit(0);
+    }
   }
 }

@@ -32,7 +32,7 @@
           <webApp>
             <contextPath>/</contextPath>
             <!-- Configure this file based on your SysAid installation. -->
-            <defaultsDescriptor>src/main/resources/webdefault.xml</defaultsDescriptor>
+            <defaultsDescriptor>src/main/resources/handshake.xml</defaultsDescriptor>
           </webApp>
         </configuration>
       </plugin>
