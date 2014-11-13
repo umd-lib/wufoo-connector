@@ -11,7 +11,7 @@
   </servlet-mapping>
   <context-param>
     <param-name>xslLocation</param-name>
-    <param-value>/apps/apache-tomcat-7.0.56/webapps/xsls</param-value>
+    <param-value>/Users/rohit89/Desktop/xsls/</param-value>
   </context-param>
 </web-app>
 

@@ -102,14 +102,16 @@ public class RequestBuilder {
     /* populating list of tagnames and their values */
     List<String> sample_tagnames = new ArrayList<String>();
     List<String> sample_tagvalues = new ArrayList<String>();
+    List<String> sample_tagids = new ArrayList<String>();
     for (Element child : children) {
       sample_tagnames.add(child.getAttribute("title").getValue());
+      sample_tagids.add(child.getAttribute("id").getValue());
       sample_tagvalues.add(child.getValue());
     }
 
     /*
      * attempting to write XSL Stylesheet
-     *
+     * 
      * :, <, >, & are replaced by REGEX_COLON, REGEX_LT, REGEX_RT, REGEX_AND for
      * validation of XSL Document. Will be replaced back at the time of file
      * creation.
@@ -125,7 +127,7 @@ public class RequestBuilder {
     sample_xsl_variable.setText(REGEX_LT
         + "xsl:value-of select=\"//field[@title='First']\"/" + REGEX_GT
         + REGEX_AND + "#160;" + REGEX_LT
-        + "xsl:value-of select=\"field[@title='Last']\"" + REGEX_GT);
+        + "xsl:value-of select=\"field[@title='Last']\"/" + REGEX_GT);
     sample_root.addContent(sample_xsl_variable);
     // </xsl:variable>
 
@@ -141,7 +143,16 @@ public class RequestBuilder {
     // <target>
     Element sample_target = new Element("target");
     sample_target.setAttribute("type", "sample type");
-    sample_target.setAttribute("comment", "sysaid/alephrx/etc..");
+    String tgt_cmt = "\n"
+        + "\t\t\t"
+        + REGEX_LT
+        + "!-- target must include:\n"
+        + "\t\t\ttype = sysaid / alephrx\n"
+        + "\t\t\tdestination URL:\n"
+        + "\t\t\tSYSAID: ( https://libticketingdev.umd.edu/webformsubmit?pageEncoding=utf-8 ) or ALEPHRX: ( http://alephrx.local/cgi-bin/api/reports )\n"
+        + "\t\t\tform ID = form_ID\n" + "\t\t\taccount ID = account_ID\n"
+        + "\t\t\t--" + REGEX_GT;
+    sample_target.setText(tgt_cmt);
 
     // <url>
     Element sample_url = new Element("url");
@@ -164,15 +175,82 @@ public class RequestBuilder {
     sample_req.addContent(sample_target);
     // </target>
 
-    // <fields>
+    Element category = new Element("category");
+    sample_req.addContent(category);
+
+    Element subcategory = new Element("subcategory");
+    sample_req.addContent(subcategory);
+
+    Element title = new Element("title");
+    sample_req.addContent(title);
+
+    Element status = new Element("status");
+    sample_req.addContent(status);
+
+    Element attachments = new Element("attachments");
+    sample_req.addContent(attachments);
+
+    Element urgency = new Element("urgency");
+    sample_req.addContent(urgency);
+
+    Element priority = new Element("priority");
+    sample_req.addContent(priority);
+
+    Element due_date = new Element("due_date");
+    sample_req.addContent(due_date);
+
+    Element main_asset = new Element("main_asset");
+    sample_req.addContent(main_asset);
+
+    Element submit_user = new Element("submit_user");
+    sample_req.addContent(submit_user);
+
+    Element request_user_fn = new Element("request_user_first_name");
+    sample_req.addContent(request_user_fn);
+
+    Element request_user_ln = new Element("request_user_last_name");
+    sample_req.addContent(request_user_ln);
+
+    Element request_user_email = new Element("request_user_email");
+    sample_req.addContent(request_user_email);
+
+    Element usmai_campus = new Element("usmai_campus");
+    sample_req.addContent(usmai_campus);
+
+    Element assigned_to = new Element("assigned_to");
+    sample_req.addContent(assigned_to);
+
+    Element technician_group = new Element("technician_group");
+    sample_req.addContent(technician_group);
+
+    Element actions = new Element("actions");
+    sample_req.addContent(actions);
+
+    Element location = new Element("location");
+    sample_req.addContent(location);
+
+    // <description>
+    Element description = new Element("description");
+    String tmp = "Description : \n\t\t\t";
     for (int i = 0; i < sample_tagnames.size(); i++) {
-      Element tmp = new Element(sample_tagnames.get(i).toLowerCase()
-          .replaceAll(" ", "_").replaceAll("[?,;\":|@/\\\']", ""));
-      tmp.setText(REGEX_LT + "xsl:value-of select=\"//field[@title='"
-          + sample_tagnames.get(i) + "']\"/" + REGEX_GT);
-      // tmp.setText(sample_tagvalues.get(i));
-      sample_req.addContent(tmp);
+      tmp = tmp + sample_tagnames.get(i) + ": " + REGEX_LT
+          + "xsl:value-of select=\"//field[@id='" + sample_tagids.get(i)
+          + "']\"/" + REGEX_GT + "\n\t\t\t";
     }
+    description.setText(tmp);
+    sample_req.addContent(description);
+    // </description>
+
+    // for (int i = 0; i < sample_tagnames.size(); i++) {
+    // Element tmp = new Element(sample_tagnames.get(i).toLowerCase()
+    // .replaceAll(" ", "_").replaceAll("[?,;\":|@/\\\']", ""));
+    // // tmp.setText(REGEX_LT + "xsl:value-of select=\"//field[@title='"
+    // // + sample_tagnames.get(i) + "']\"/" + REGEX_GT);
+    // tmp.setText(REGEX_LT + "xsl:value-of select=\"//field[@id='"
+    // + sample_tagids.get(i) + "']\"/" + REGEX_GT);
+    // // tmp.setText(sample_tagvalues.get(i));
+    // sample_req.addContent(tmp);
+    // }
     // </fields>
 
     sample_req_root.addContent(sample_req);
@@ -381,9 +459,7 @@ public class RequestBuilder {
           /*
            * Request parameters are encoded into the URL as Name-Value Pairs. To
            * create these pairs, the element names need to be translated into
-           * <<<<<<< HEAD the parameters expected by SysAid ======= the
-           * parameters expected by AlephRx >>>>>>>
-           * a2a59b1d9339bd471567f8cf2c8cb17846065b74
+           * the parameters expected by AlephRx
            */
           /*
            * Creates an entity from the list of parameters and associates it
@@ -551,10 +627,10 @@ public class RequestBuilder {
     Element category = req.getChild("category");
     Element subcategory = req.getChild("subcategory");
     Element title = req.getChild("title");
-    Element campus = req.getChild("usmaiCampus");
-    Element first = req.getChild("firstName");
-    Element last = req.getChild("lastName");
-    Element email = req.getChild("email");
+    Element campus = req.getChild("usmai_campus");
+    Element first = req.getChild("request_user_first_name");
+    Element last = req.getChild("request_user_last_name");
+    Element email = req.getChild("request_user_email");
 
     /* Request description */
     fields.add(new BasicNameValuePair("desc", desc.getText()));
