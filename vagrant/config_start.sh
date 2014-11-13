@@ -1,7 +1,7 @@
 #Configure tomcat server
 cd /home/vagrant/tomcat7
-#replace server.xml to change webapp directory on new server
-cp -f /defaults/server.xml conf/server.xml
+#Create a symbolic link for the wufoo-connector webapp to the tomcat deployment directory.
+ln -s /webapps/wufoo-connector.war webapps/wufoo-connector.war
 #start tomcat
 ./bin/startup.sh
 #Change permissions and ownership from default

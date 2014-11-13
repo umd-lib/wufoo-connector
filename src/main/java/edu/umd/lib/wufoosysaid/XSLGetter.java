@@ -26,16 +26,20 @@ public class XSLGetter {
     Document xsl = null;
     try {
       /*
-       * Getting the xsl from ../xsls/. Get out from the webapp and fetch XSL
-       * from filesystem.
+       * Getting the xsl from the file system at xslLocation parameter in
+       * web.xml(for dev) / server's context.xml(for prod).
        */
-      String XSL_PATH = new File(context.getRealPath(context.getContextPath()))
-      .getParent() + "/xsls/%s.xsl";
+
+      String XSL_PATH = context.getInitParameter("xslLocation") + "%s.xsl";
 
       String xslPath = String.format(XSL_PATH, hash);
-      log.debug("Attempting to locate XSL file for hash " + hash + "at path "
+      log.debug("Attempting to locate XSL file for hash " + hash + " at path "
           + xslPath);
-      xsl = sax.build(new File(xslPath));
+      if (new File(xslPath).exists()) {
+        xsl = sax.build(new File(xslPath));
+      } else {
+        log.debug("No XSL found for hash " + hash + " at path " + xslPath);
+      }
     } catch (JDOMException e) {
       log.error("Parsing Error: JDOMException", e);
       return null;
