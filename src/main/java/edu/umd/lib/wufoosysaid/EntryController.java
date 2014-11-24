@@ -241,10 +241,7 @@ public class EntryController extends HttpServlet {
     } else {
       response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
           "Error occured while attempting to create requests from entry.");
-      // BAD TEMPORARY FIX, Exit if no XSL was found!
-      // (To avoid multiple do post requests by container)
-
-      System.exit(0);
+      return;
     }
   }
 }
