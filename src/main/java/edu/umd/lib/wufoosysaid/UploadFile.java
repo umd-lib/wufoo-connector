@@ -49,6 +49,7 @@ public class UploadFile extends HttpServlet {
    * @see HttpServlet#doPost(HttpServletRequest request, HttpServletResponse
    *      response)
    */
+  @SuppressWarnings("unchecked")
   @Override
   protected void doPost(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
@@ -67,7 +68,6 @@ public class UploadFile extends HttpServlet {
     /**
      * File upload logic
      */
-    boolean isMultipartContent = ServletFileUpload.isMultipartContent(request);
     FileItemFactory factory = new DiskFileItemFactory();
     ServletFileUpload upload = new ServletFileUpload(factory);
     try {
@@ -82,7 +82,7 @@ public class UploadFile extends HttpServlet {
           out.println("NAME: " + fileItem.getName() + "<br/>SIZE (BYTES): "
               + fileItem.getSize());
           out.println("<br> <b>The file has been successfully uploaded !<b>");
-          out.println("<br><br><a href=\"Upload.jsp\">Back</a>");
+          out.println("<br><br><a href=\"upload.jsp\">Back</a>");
 
           File f = new File(XSL_PATH_File + "/" + fileItem.getName());
           fileItem.write(f);
