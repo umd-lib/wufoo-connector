@@ -266,7 +266,7 @@ public class RequestBuilder {
 
     /* create new file at xsl location */
     try {
-      String filepath = context.getInitParameter("xslLocation") + "example/";
+      String filepath = context.getInitParameter("xslLocation");
       new File(filepath).mkdirs();
 
       log.debug("Attempting to create sample xsl for " + sample_filename);

@@ -1,5 +1,5 @@
 <!--
-This is the admin interface for Wufoo-connector to anabe upload and download of xsl files. 
+This is the admin interface for Wufoo-connector to anabe upload and download of xsl files.
  -->
 <%@ page language="java" contentType="text/html; charset=ISO-8859-1" pageEncoding="ISO-8859-1"%>
 
@@ -12,26 +12,27 @@ This is the admin interface for Wufoo-connector to anabe upload and download of 
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
 <title>Upload Page</title>
-<script src="http:////cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.js"></script>
-<script src="http://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.2.0/js/bootstrap.min.js"></script>
-<link href="http://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet"/>
+<script src="https:////cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.2.0/js/bootstrap.min.js"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet"/>
 <script type="text/javascript">
+
+<%String XSL_DL_URL = getServletContext().getInitParameter("xslDownloadURL");%>
 
 $(document).ready(function(){
     $("#selectBoxId").change(function(){
         console.log($(this).val());
-            
-        var pathOfFile = "http://localhost:8080/xsls/"+$(this).val();
+		var xsl_dl_url = '<%=XSL_DL_URL%>';
+        var pathOfFile = xsl_dl_url + $(this).val();
+
         console.log(pathOfFile);
         $("#anchorId").attr("href",pathOfFile);
-        
     });
-    
 });
 
 </script>
 </head>
-<body> 
+<body>
 <h2 align="center"> Wufoo-Connector</h2>
 <h4 align="center"> Admin Interface for Upload and Download of XSLs</h4>
 <%
@@ -53,9 +54,9 @@ String XSL_PATH_File = getServletContext().getInitParameter("xslLocation");
                             out.println("<option value='"+file.getName()+"'>"+ file.getName()+"</option>");
                             }
                     }
-                    
+
                 %>
-                </select> 
+                </select>
         </div>
         </div>
         <div class="col-md-4"></div>
@@ -67,10 +68,10 @@ String XSL_PATH_File = getServletContext().getInitParameter("xslLocation");
      <br/>
      <input type="file" size="50" name="file3">
      <br/>
-     <input type="submit" class="btn btn-primary" value="Upload"> 
+     <input type="submit" class="btn btn-primary" value="Upload">
   </form>
    </div>
-    
+
 </div>
 </body>
 </html>
