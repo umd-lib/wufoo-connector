@@ -1,16 +1,11 @@
-Wufoo Connector
-=========================
+# Wufoo Connector
 
-A web service designed to automatically create help desk tickets for ticket tracking systems (example: SysAid(https://libticketingdev.umd.edu/webformsubmit?pageEncoding=utf-8) and AlephRx(http://alephrx.local/cgi-bin/api/reports)) from entries to  [Wufoo](http://www.wufoo.com/) forms to using Wufoo's [webhooks integration](http://help.wufoo.com/articles/en_US/SurveyMonkeyArticleType/Webhooks).
-
+A web service designed to automatically create help desk tickets for ticket tracking systems (example: SysAid(https://libticketing.umd.edu/webformsubmit?pageEncoding=utf-8) and AlephRx(http://alephrx.local/cgi-bin/api/reports)) from entries to  [Wufoo](http://www.wufoo.com/) forms to using Wufoo's [webhooks integration](http://help.wufoo.com/articles/en_US/SurveyMonkeyArticleType/Webhooks). The web service is a Java web application (wufoo-connector.war) that can be installed and executed under Tomcat, Jetty or other servlet containers. This document focus on the installation and configuration using Tomcat.
 
 **Warning**: This is development level software, and has only been tested using our installation of SysAid Server. It hasn't been tested on SysAid Cloud and may be incompatible. It also may need to be modified for use with other SysAid installations.
 
 
-
-Configuration
------------------
-**Note**: This web service is still in a prototype stage, and some of it's functionality is still unpolished. Ideally, the configuration needs of running this connector will be simplified in the future. 
+## Configuration
 
 Configuration for this connector is composed of three types:
 
@@ -18,91 +13,7 @@ Configuration for this connector is composed of three types:
 * The creation of XSL files that map how forms are converted into tickets.
 * Configuration of the connector itself
 
-### Configuration of Connector
-Follow the steps below before making any settings for the Wufoo Connector:
-
-1. Configure log4j for Wufoo Connector. Add log4j to CATALINA_OPTS
-```
-setenv CATALINA_OPTS "-server -XX:MaxPermSize=256m -Xmx1024M -Xms1024M -Dlog4j.configuration=file:${CATALINA_BASE}/conf/log4j.xml" 
-```
-
-2. Add /apps/cms/tomcat-misc/conf/log4j.xml
-
-``` 
-<?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE log4j:configuration SYSTEM "log4j.dtd">
-<log4j:configuration xmlns:log4j="http://jakarta.apache.org/log4j/">
-
-    <!-- wufoo-connector.log -->
-       <appender name="wufoo" class="org.apache.log4j.DailyRollingFileAppender">
-        <param name="File" value="${catalina.base}/logs/wufoo-connector.log"/>
-        <param name="Append" value="true"/>
-        <layout class="org.apache.log4j.PatternLayout">
-            <param name="ConversionPattern" value="%d{dd.MM.yyyy HH:mm:ss} %-5p [%C.%M():%L] %m%n"/>
-        </layout>
-    </appender>
-
-    <logger name="edu.umd.lib.wufoosysaid.EntryController">
-        <level value="debug"/>
-	<appender-ref ref="wufoo"/>
-    </logger>
-
-</log4j:configuration>
-```
-3.Add the following configuration to httpd.conf in Apache (wwwdev.lib.umd.edu)
-
-```
-<VirtualHost 129.2.19.175:443>
-  ServerName wwwdev.lib.umd.edu
-  ....
-  RewriteCond   %{REQUEST_URI}    !^/wufoo-connector.*
-  ....
-
-  <Location "/wufoo-connector">
-    Order allow,deny
-    Allow from all
-  </Location>
-  .....
-   ProxyPass /wufoo-connector http://localhost:9602/wufoo-connector
-   ProxyPassReverse /wufoo-connector http://localhost:9602/wufoo-connector
-  ....
-</VirtualHost>
-``` 
-### Connector Settings
-Follow the steps below for Wufoo Connector settings:
-
-1. Installation : Create a folder on server for storing the xsl files for each wufoo form.
-
-2. Add the following lines to `context.xml` to set location of xsl folder on server.
-```
-<Parameter name="xslLocation" value="/Users/rohit89/Desktop/xsls_server/" override="false"/>
-```
-
-3. Add the following lines to `server.xml` inside Host tag to give redirection path for downloading xsls
-```
-<Context docBase="/Users/rohit89/Desktop/xsls_server" path="/wufoo-connector/xsls" />
-```
-
-4. With this you will be able to find the files (eg. /Users/rohit89/Desktop/xsls_server/m6fwrmr1oj910z.xsl) under:
-`http://localhost:8080/wufoo-connector/xsls/m6fwrmr1oj910z.xsl`
-
-### Build and deploy wufoo connector on tomcat
-
-1. Download source code from github at [Wufoo Connector](https://github.com/umd-lib/wufoo-connector)
-2. Compile the code using
-```
-mvn package
-```
-
-3. Go to `target` folder in wufoo-connector project and paste the `wufoo-connector.war` file in webapps directory on server.
-4. Start the tomcat server from the folder where tomcat is installed.
-
-```
-./control start
-```
-
-## Wufoo Form Configuration
-
+### Wufoo Form Configuration
 
 The basic workflow as-of-now is as follows:
 
@@ -119,24 +30,110 @@ The basic workflow as-of-now is as follows:
 2. A sample xsl will be generated based on the fields in the wufoo form called *sample_[hash].xsl*.
 3. You can modify this file following the steps below.  
 
-### XSL File Modification
-1. Save the XSL file with a filename of `[hash].xsl` which translates the entry XML structure into the requests XML structure like `z1h2ln4i177snof.xsl`.
-2. Under the root `Requests` element, create a `Request` element for each ticket you wish to be created for a form submission.
-3. Under every request element include a 'target' element which defines the target url and other necessary information specific to destination for posting form information.
+   a. Save the XSL file with a filename of `[hash].xsl` which translates the entry XML structure into the requests XML structure like `z1h2ln4i177snof.xsl`.
+   b. Under the root `Requests` element, create a `Request` element for each ticket you wish to be created for a form submission.
+   c. Under every request element include a 'target' element which defines the target url and other necessary information specific to destination for posting form information.
 For example, in Sysaid we add the following:
 
-    * Url(The location where ticket submissions will be made for your SysAid installation. For us, we use the `webformsubmit` script as part of SysAid's built-in webform processing, but it may vary by installation.)
+      * Url(The location where ticket submissions will be made for your SysAid installation. For us, we use the `webformsubmit` script as part of SysAid's built-in webform processing, but it may vary by installation.)
 
-    * Form Id(A unique key used to authorize requests to your help desk. It will be a series of three hexadecimal numbers separated by colons. These numbers can be positive or negative and are 8, 10, and 4 digits long, respectively.)
+      * Form Id(A unique key used to authorize requests to your help desk. It will be a series of three hexadecimal numbers separated by colons. These numbers can be positive or negative and are 8, 10, and 4 digits long, respectively.)
     
-    * Account Id(Your organization's account ID with SysAid. It can be found under the “About” menu in your help desk.).
+      * Account Id(Your organization's account ID with SysAid. It can be found under the “About” menu in your help desk.).
 
-4. The .xsl file contains a placeholder for alephRx request.
+   d. The .xsl file contains a placeholder for alephRx request.
 In AlpehRx we add:
 
-   * Url(The location where ticket submissions will be made for your AlephRx installation. 
+      * Url(The location where ticket submissions will be made for your AlephRx installation.  
 
 
+### Configuration of Connector
+The wufoo connector root path is https://<server-domain-name>/wufoo-connector. The web service request is ~/wufoo-connector/entry/[hash] that is explained in the previous section - Wufoo Form Configuration. The connector accesses the XSL file through the configured location at server. 
+
+There is an utility ~/wufoo-connector/upload.jsp to help to upload XSL to the server. It also allows to download any XSL files from the server. The configuration of /wufoo-connector/xsls context and "xslDownloadURL" parameter are for this purpose.
+
+Configuration in Tomcat server.xml:
+
+* Add wufoo-connector path context
+
+```
+<Context
+          path="/wufoo-connector"
+          docBase="wufoo-connector"
+          reloadable="false"
+          crossContext="false"
+        />
+```
+
+
+* Add /wufoo-connector/xsls path context
+
+```
+<Context
+	   docBase="/apps/cms/resources/wufoo-connector/xsl"
+	   path="/wufoo-connector/xsls"
+	/>
+```
+
+
+Configuration for Tomcat resources and context.xml:
+
+* Create a folder on server for storing the xsl files for each wufoo form. For example, /apps/cms/resources/wufoo-connector/xsl.
+
+* Add "xslLocation" parameter into Tomcat context.xml to set location of xsl folder for the wufoo-connector application.
+
+```
+For example:
+<Parameter name="xslLocation" value="/apps/cms/resources/wufoo-connector/xsl/" override="false"/>
+```
+* Add "xslDownloadURL" parameter to context.xml to set the 
+
+```
+For example:
+<Parameter name="xslDownloadURL" value="https://www.lib.umd.edu/wufoo-connector/xsls/"
+	override="false"/>
+```
+
+## Apache Host Configuration
+
+If the server has Apache as its web server, using the Library website domain and SSL, then the following configuration is needed and added to the VirtualHost section in httpd.conf. 
+
+```
+For example: 
+
+<VirtualHost 129.2.19.172:443>
+  ServerName www.lib.umd.edu
+  ....
+  RewriteCond   %{REQUEST_URI}    !^/wufoo-connector.*
+  ....
+
+  <Location "/wufoo-connector">
+    Order allow,deny
+    Allow from all
+  </Location>
+  .....
+   ProxyPass /wufoo-connector http://localhost:9602/wufoo-connector
+   ProxyPassReverse /wufoo-connector http://localhost:9602/wufoo-connector
+  ....
+</VirtualHost>
+``` 
+
+
+## Deploy to Server
+
+1. Download source code from github at [Wufoo Connector](https://github.com/umd-lib/wufoo-connector)
+2. Compile the code using
+
+```
+mvn package
+```
+
+3. Go to `target` folder in wufoo-connector project and transfer the `wufoo-connector.war` file to the webapps directory on server (/apps/cms/webapps).
+4. Start the tomcat server from the folder where tomcat is installed (/apps/cms/tomcat-misc).
+
+```
+./control start
+``` 
 
 ## Running on Vagrant (optional)
 The application can be run on a tomcat instance running on a virtual machine that can be setup using Vagrant.
