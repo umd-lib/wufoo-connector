@@ -96,7 +96,7 @@ For example:
 
 ## Apache Host Configuration
 
-If the server has Apache as its web server, using the Library website domain and SSL, then the following configuration is needed and added to the VirtualHost section in httpd.conf. 
+If the server has Apache as its web server and use the Library website domain and SSL, then RewriteCond, \<Location\>, ProxyPass and ProxyPassReserve configuration are needed and added to the VirtualHost section in httpd.conf. 
 
 ```
 For example: 
@@ -121,17 +121,18 @@ For example:
 
 ## Deploy to Server
 
-1. Download source code from github at [Wufoo Connector](https://github.com/umd-lib/wufoo-connector)
-2. Compile the code using
+* Download source code from github at [Wufoo Connector](https://github.com/umd-lib/wufoo-connector)
+* Compile the code using
 
 ```
 mvn package
 ```
 
-3. Go to `target` folder in wufoo-connector project and transfer the `wufoo-connector.war` file to the webapps directory on server (/apps/cms/webapps).
-4. Start the tomcat server from the folder where tomcat is installed (/apps/cms/tomcat-misc).
+* Go to `target` folder in wufoo-connector project and transfer the `wufoo-connector.war` file to the webapps directory on server (/apps/cms/webapps).
+* Start the tomcat server from the folder where tomcat is installed (/apps/cms/tomcat-misc).
 
 ```
+cd /apps/cms/tomcat-misc
 ./control start
 ``` 
 
@@ -140,13 +141,29 @@ The application can be run on a tomcat instance running on a virtual machine tha
 
 To do this follow the following steps:
 
-1. Install Vagrant and VirtualBox.
-2. Open `vagrant/Vagrantfile`.
-3. Make sure that <target> in `config.vm.synced_folder "<target>", "/webapps"`, `<target>` points to the absolute path of `/wufoo-connector/target` on your computer, ie. something like `/users/user/git/wufoo-connector/target`
-4. Note the port at `host:` under `config.vm.network:`. This is the port that the server will be available on. Default: 4545
-5. Navigate to the vagrant folder in the root and run `vagrant up` on terminal. This will download the OS for the VM, the required files and deploy the webapp on a tomcat server running on the VM.
-6. Go to [http://localhost:4545/wufoo-connector](http://localhost:4545/wufoo-connector) to access the deployed app.
-7. To update the app thats deployed, run `mvn package` from the host machine.
+* Install Vagrant and VirtualBox.
+* At local development, chagne directory to vagrant and open Vagrantfile.
+* Make sure that \<target> is specified in config.vm.synced_folder property where it points to the absolute path of the maven build target. For example, /users/user/git/wufoo-connector/target or /apps/git/wufoo-connector/target.
+
+```
+For example:
+config.vm.synced_folder "/apps/git/wufoo-connector/target", "/webapps"
+```
+
+* The host:\<port> is specified in config.vm.network prperty. This is the port that Tomcat server will be listening. The default is host:4545.
+
+```
+For example:
+config.vm.network :forwarded_port, host:4545, guest:8080
+```
+
+* Run "vagrant up". This will download the OS for the VM, the required files and deploy the webapp on a tomcat server running on the VM.
+
+```
+vagrant up
+```
+* Go to [http://localhost:4545/wufoo-connector](http://localhost:4545/wufoo-connector) to access the deployed app.
+* To update the app that is deployed, run "mvn package" from the development git folder.
 
 
 ##Running on jetty (optional)
