@@ -1,7 +1,6 @@
 package edu.umd.lib.wufoosysaid;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.MalformedURLException;
@@ -37,6 +36,8 @@ import org.json.XML;
 public class EntryController extends HttpServlet {
   private static final long serialVersionUID = 1L;
   private static Logger log = Logger.getLogger(EntryController.class);
+  private static XMLOutputter output = new XMLOutputter(
+      Format.getPrettyFormat());
 
   private static final String XPATH_ID = "//ID[.='%ID%']/../Label/text()|//ID[.='%ID%']/../Title[not(../SubField)]/text()";
 
@@ -56,16 +57,18 @@ public class EntryController extends HttpServlet {
      * a handshake key was specified in the configuration. If not yet
      * configured, user is warned of security risk
      */
+
     String handshake = context.getInitParameter("handshakeKey");
+
     if (StringUtils.isEmpty(handshake)) {
-      log.warn("No handshake key is set in webdefault.xml. "
+      log.warn("No handshake key is set in handshake.xml. "
           + "Without authentication, your service may be vulnerable "
           + "to spam and other attacks.");
     } else {
       String requestKey = request.getParameter("HandshakeKey");
       if (StringUtils.isEmpty(requestKey)) {
         String error = "Handshake key is missing from request. Make sure "
-            + "Wufoo form notifications are properly configured";
+            + "form notifications are properly configured";
         response.sendError(HttpServletResponse.SC_BAD_REQUEST, error);
         return;
       } else if (!StringUtils.equals(handshake, requestKey)) {
@@ -83,7 +86,7 @@ public class EntryController extends HttpServlet {
     String path = request.getRequestURI();
     String hash = request.getPathInfo().replace("/", "");
     String entryId = request.getParameter("EntryId");
-    log.debug("POST made to " + path + ": ");
+    log.debug("POST path: " + path);
     log.debug("Hash of " + hash + " extracted.");
 
     /*
@@ -107,7 +110,18 @@ public class EntryController extends HttpServlet {
      * so it can be properly converted to XML (it is passed as JSON). This will
      * be used to extract the titles of fields
      */
-    String fieldStructure = parameterMap.get("FieldStructure")[0];
+    String fieldStructure = null;
+    try {
+      fieldStructure = parameterMap.get("FieldStructure")[0];
+    } catch (NullPointerException e) {
+      log.error(
+          "Error in Wufoo Form Webhook configuration, check the chbox for including field structures",
+          e);
+      response
+      .sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+          "Error in Wufoo Form Webhook configuration, can't find field structures");
+      return;
+    }
     fieldStructure = fieldStructure.replaceAll("Fields", "Field");
 
     /*
@@ -134,6 +148,7 @@ public class EntryController extends HttpServlet {
           "Error in coverting fieldStructure into XML");
       return;
     }
+    // log.debug("Structure XML: \n" + output.outputString(structure));
 
     /*
      * Creates a new Entry with the form hash, entry id, and field values
@@ -177,7 +192,7 @@ public class EntryController extends HttpServlet {
      * outputs the document as a string
      */
     Document entryDoc = new Document(root);
-    log.debug("Entry XML: \n");
+    log.debug("Entry XML: \n" + output.outputString(entryDoc));
     /*
      * Creates a RequestBuilder that transforms Wufoo entry XML into SysAid
      * request XML
@@ -185,14 +200,14 @@ public class EntryController extends HttpServlet {
     Document requestDoc;
     RequestBuilder builder;
     try {
-      builder = new RequestBuilder(context, hash);
-      requestDoc = builder.buildRequestsDocument(entryDoc);
+      builder = new RequestBuilder(context, hash, entryDoc);
+      requestDoc = builder.getRequest();
     } catch (JDOMException e) {
       String errormsg = "Exception occured while trying to parse DOM of "
           + hash + ".xsl. File may not be well-formed.";
       log.error(errormsg, e);
       response
-          .sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, errormsg);
+      .sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, errormsg);
       return;
     } catch (MalformedURLException e) {
       String errormsg = "Malformed URL created from hash " + hash
@@ -207,28 +222,26 @@ public class EntryController extends HttpServlet {
       response.sendError(HttpServletResponse.SC_NOT_FOUND, errormsg);
       return;
     }
+
     if (requestDoc != null) {
+      log.debug("Printing REQUEST DOC------------: \n"
+          + output.outputString(requestDoc));
       builder.sendRequests();
       /*
        * Sets the response status code to OK and the response to the SysAid
        * Requests XML for debugging purposes
        */
-      XMLOutputter outputter = new XMLOutputter(Format.getPrettyFormat());
       StringWriter sw = new StringWriter();
-      outputter.output(entryDoc, sw);
-
-      String xml = sw.toString();
+      output.output(entryDoc, sw);
 
       response.setCharacterEncoding("UTF-8");
       response.setContentType("text/xml");
-
-      PrintWriter writer = response.getWriter();
-      writer.write(xml);
+      response.getWriter().write(sw.toString());
       response.setStatus(HttpServletResponse.SC_OK);
     } else {
       response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
           "Error occured while attempting to create requests from entry.");
+      return;
     }
-
   }
 }
