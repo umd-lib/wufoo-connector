@@ -122,6 +122,10 @@
       <Host name="localhost"  appBase="/webapps"
             unpackWARs="true" autoDeploy="true">
 
+		<Context docBase="/home/vagrant/resources/xsl"
+			path="/wufoo-connector/xsl"
+    	/>
+
         <!-- SingleSignOn valve, share authentication between web applications
              Documentation at: /docs/config/valve.html -->
         <!--

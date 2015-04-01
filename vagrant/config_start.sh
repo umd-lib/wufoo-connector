@@ -8,6 +8,8 @@ ln -s /webapps/wufoo-connector.war webapps/wufoo-connector.war
 cd /home/vagrant
 sudo chown -R vagrant tomcat7
 sudo chmod a+rw -R tomcat7
+mkdir -p resources/xsl
 
 #config bash
 cp -f /defaults/bash_profile /home/vagrant/.bash_profile
+cp -f /defaults/conf/* /home/vagrant/tomcat7/conf
