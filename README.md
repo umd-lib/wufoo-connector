@@ -94,7 +94,8 @@ For example:
 	override="false"/>
 ```
 
-## Apache Host Configuration
+## Running on Server
+### Apache Host Configuration
 
 If the server has Apache as its web server and use the Library website domain and SSL, then RewriteCond, \<Location\>, ProxyPass and ProxyPassReserve configuration are needed and added to the VirtualHost section in httpd.conf. 
 
@@ -119,7 +120,7 @@ For example:
 ``` 
 
 
-## Deploy to Server
+### Deploy to Server
 
 * Download source code from github at [Wufoo Connector](https://github.com/umd-lib/wufoo-connector)
 * Compile the code using
@@ -136,13 +137,14 @@ cd /apps/cms/tomcat-misc
 ./control start
 ``` 
 
-## Running on Vagrant (optional)
+## Running on Vagrant (local)
 The application can be run on a tomcat instance running on a virtual machine that can be setup using Vagrant.
 
+### Vagrant Configuration and Execution
 To do this follow the following steps:
 
-* Install Vagrant and VirtualBox.
-* At local development, chagne directory to vagrant and open Vagrantfile.
+* Install [Vagrant](https://www.vagrantup.com/) and [VirtualBox](https://www.virtualbox.org/).
+* At local development, chagne directory to vagrant and open Vagrantfile (/apps/git/wufoo-connector/vagrant).
 * Make sure that \<target> is specified in config.vm.synced_folder property where it points to the absolute path of the maven build target. For example, /users/user/git/wufoo-connector/target or /apps/git/wufoo-connector/target.
 
 ```
@@ -156,25 +158,63 @@ config.vm.synced_folder "/apps/git/wufoo-connector/target", "/webapps"
 For example:
 config.vm.network :forwarded_port, host:4545, guest:8080
 ```
+* Review tomcat configuration files to be deployed to Vagrant in ~vagrant/defaults/conf
+  * Make sure the xslLocation and xslDownloadURL parameters are defined in context.xml
+  * Make sure docBase of /home/vagrant/resources/xsl is mapped to /wufoo-connector/xsl in server.xml
+
+```
+context.xml:
+ 
+<Parameter name="xslLocation" value="/home/vagrant/resources/xsl/" override="false"/>
+<Parameter name="xslDownloadURL" value="http://localhost:4545/wufoo-connector/xsl/" override="false"/>
+
+```
+
+```
+server.xml:
+
+<Context docBase="/home/vagrant/resources/xsl" path="/wufoo-connector/xsl" />
+
+```
 
 * Run "vagrant up". This will download the OS for the VM, the required files and deploy the webapp on a tomcat server running on the VM.
 
 ```
-vagrant up
+$ vagrant up
 ```
 * Go to [http://localhost:4545/wufoo-connector](http://localhost:4545/wufoo-connector) to access the deployed app.
-* To update the app that is deployed, run "mvn package" from the development git folder.
+* Visit [http://localhot:4545/wufoo-connector/upload.jsp](http://localhot:4545/wufoo-connector/upload.jsp) to load xsl template.
+* To update the app that is deployed,
+
+```
+$ cd /apps/git/wufoo-connector
+$ mvn pakcage
+```
+* To execute the vagrant provision if config_start.sh is changed,
+
+```
+$ cd /apps/git/wufoo-connector/vagrant
+$ vagrant provision
+```
 
 
-##Running on jetty (optional)
+### Vagrant Machine Environment
 
-This web service uses the Maven Jetty plugin to run. To run locally, execute the following command from the project root folder:
-	
-	mvn jetty:run
-	
-Once running, Jetty will continue to scan the configuration for changes, allowing the addition and modification of form mappings without having to redeploy the service. By default, the service scans every 5 seconds, but this can be changed in the maven-jetty plugin configuration in [pom.xml](pom.xml).
+* To access shell of the Vagrant machine
 
+```
+$ cd /apps/git/wufoo-connector/vagrant
+$ vagrant ssh
+(will be at home of vagrant: /home/vagrant)
+```
+* Tomcat environment
+  * Tomcat files are under /home/vagrant/tomcat7.
+  * Tomcat logs are at /home/vagant/tomcat7/logs.
+  * Shutdown tomcat by command ~/tomcat7/bin/shutdown.sh
+  * Statrt tomcat by command ~/tomcat/bin/startup.sh
 
+* XSL files should be located in /home/vagrant/resources/xsl so that wufoo-connector can access.
+* The XSL file can be uploaded to /home/vagrant/resources/xsl from [http://localhot:4545/wufoo-connector/upload.jsp](http://localhot:4545/wufoo-connector/upload.jsp).
 
 ## License
 
