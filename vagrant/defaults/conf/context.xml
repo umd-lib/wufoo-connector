@@ -17,12 +17,12 @@
 -->
 <!-- The contents of this file will be loaded for each web application -->
 <Context>
-    <!-- xsls location for wufoo-connector -->
+    <!-- xsl location for wufoo-connector -->
     <Parameter name="xslLocation" value="/home/vagrant/resources/xsl/"
     	override="false"/>
 
     <!-- download/upload path for upload.jsp -->
-    <Parameter name="xslDownloadURL" value="http://localhost:4545/wufoo-connector/xsl/"
+    <Parameter name="xslDownloadURL" value="/wufoo-connector/xsl/"
 	override="false"/>
 
     <!-- Default set of monitored resources -->

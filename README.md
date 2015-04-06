@@ -37,7 +37,7 @@ Configuration in Tomcat server.xml:
 ```
 <Context
 	 docBase="/apps/cms/resources/wufoo-connector/xsl"
-	 path="/wufoo-connector/xsls"
+	 path="/wufoo-connector/xsl"
 />
 ```
 Configuration for Tomcat context.xml
@@ -57,7 +57,7 @@ For example:
 ```
 For example:
 
-<Parameter name="xslDownloadURL" value="https://www.lib.umd.edu/wufoo-connector/xsls/"
+<Parameter name="xslDownloadURL" value="/wufoo-connector/xsl/"
 	override="false"/>
 	
 ```
@@ -297,35 +297,36 @@ A complete **[hash].xsl** example:
 
 
 ## Running on Vagrant (local)
-The application can be run on a tomcat instance running on a virtual machine that can be setup using Vagrant.
 
-### Vagrant Configuration and Execution
-To do this follow the following steps:
+The connector can be run on a tomcat instance within Vagrant virtual machine.
+
+### Vagrant Configuration
+To do this, follow the steps:
 
 * Install [Vagrant](https://www.vagrantup.com/) and [VirtualBox](https://www.virtualbox.org/).
-* At local development, chagne directory to vagrant and open Vagrantfile (/apps/git/wufoo-connector/vagrant).
-* Make sure that \<target> is specified in config.vm.synced_folder property where it points to the absolute path of the maven build target. For example, /users/user/git/wufoo-connector/target or /apps/git/wufoo-connector/target.
+* At local development, chagne directory to vagrant and open **Vagrantfile** (/apps/git/wufoo-connector/vagrant).
+  * Make sure that the webapp path is specified in config.vm.synced_folder property where it points to the absolute path of the maven build target. For example, /users/user/git/wufoo-connector/target or /apps/git/wufoo-connector/target.
+  * The host:\<port> is specified in config.vm.network prperty. This is the port that Tomcat server will be listening. The default is host:4545.
+
 
 ```
 For example:
 config.vm.synced_folder "/apps/git/wufoo-connector/target", "/webapps"
 ```
 
-* The host:\<port> is specified in config.vm.network prperty. This is the port that Tomcat server will be listening. The default is host:4545.
-
 ```
 For example:
 config.vm.network :forwarded_port, host:4545, guest:8080
 ```
-* Review tomcat configuration files to be deployed to Vagrant in ~vagrant/defaults/conf
+* Review tomcat configuration files that are deployed to Vagrant. The files are at ~vagrant/defaults/conf.
   * Make sure the xslLocation and xslDownloadURL parameters are defined in context.xml
-  * Make sure docBase of /home/vagrant/resources/xsl is mapped to /wufoo-connector/xsl in server.xml
+  * Make sure docBase of /home/vagrant/resources/xsl is mapped in server.xml
 
 ```
 context.xml:
- 
+
 <Parameter name="xslLocation" value="/home/vagrant/resources/xsl/" override="false"/>
-<Parameter name="xslDownloadURL" value="http://localhost:4545/wufoo-connector/xsl/" override="false"/>
+<Parameter name="xslDownloadURL" value="/wufoo-connector/xsl/" override="false"/>
 
 ```
 
@@ -336,44 +337,56 @@ server.xml:
 
 ```
 
-* Run "vagrant up". This will download the OS for the VM, the required files and deploy the webapp on a tomcat server running on the VM.
+### Vagrant Execution
 
-```
-$ vagrant up
-```
-* Go to [http://localhost:4545/wufoo-connector](http://localhost:4545/wufoo-connector) to access the deployed app.
-* Visit [http://localhot:4545/wufoo-connector/upload.jsp](http://localhot:4545/wufoo-connector/upload.jsp) to load xsl template.
-* To update the app that is deployed,
-
-```
-$ cd /apps/git/wufoo-connector
-$ mvn pakcage
-```
-* To execute the vagrant provision if config_start.sh is changed,
+Run "vagrant up". This will download the OS for the VM and the required files, and deploy the webapp on a tomcat server running on the VM.
 
 ```
 $ cd /apps/git/wufoo-connector/vagrant
+$ vagrant up
+```
+
+The connector should be running.
+
+* Visit [http://localhost:4545/wufoo-connector](http://localhost:4545/wufoo-connector) and a welcome page is displayed. That means the connector is up running.
+* Visit [http://localhot:4545/wufoo-connector/upload.jsp](http://localhot:4545/wufoo-connector/upload.jsp), upload/download utility, to upload/download xsl files.
+
+When the java or jsp code is changed, rebuild the war file and Vagrant war file will be updated too.
+
+(Due to the configuration: config.vm.synced_folder "/apps/git/wufoo-connector/target", "/webapps")
+
+```
+$ mvn pakcage
+```
+Execute the vagrant provision if any file under ~vagrant/defaults/conf (ex, server.xml, context.xml) is changed.
+
+```
 $ vagrant provision
 ```
+
+To test the connector, follow the steps:
+
+* Upload a valid [hash].xsl that is associated with a Wufoo form
+* Enter data to the Wufoo form and submit it
+* Check if the target application receives the data as expected
 
 
 ### Vagrant Machine Environment
 
-* To access shell of the Vagrant machine
+To access shell of the Vagrant machine,
 
 ```
 $ cd /apps/git/wufoo-connector/vagrant
 $ vagrant ssh
 (will be at home of vagrant: /home/vagrant)
 ```
-* Tomcat environment
-  * Tomcat files are under /home/vagrant/tomcat7.
-  * Tomcat logs are at /home/vagant/tomcat7/logs.
-  * Shutdown tomcat by command ~/tomcat7/bin/shutdown.sh
-  * Statrt tomcat by command ~/tomcat/bin/startup.sh
+Tomcat environment
 
-* XSL files should be located in /home/vagrant/resources/xsl so that wufoo-connector can access.
-* The XSL file can be uploaded to /home/vagrant/resources/xsl from [http://localhot:4545/wufoo-connector/upload.jsp](http://localhot:4545/wufoo-connector/upload.jsp).
+* Tomcat home are /home/vagrant/tomcat7.
+* Tomcat logs are at /home/vagant/tomcat7/logs.
+* Shutdown tomcat by command ~/tomcat7/bin/shutdown.sh
+* Statrt tomcat by command ~/tomcat/bin/startup.sh
+* XSL files should be located at /home/vagrant/resources/xsl.
 
 ## License
 
